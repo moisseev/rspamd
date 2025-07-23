@@ -21,10 +21,6 @@ jobs:
         browser: [firefox]
         # browser: [firefox, chromium]
     steps:
-      - name: Create directories
-        run: |
-          sudo mkdir -p ${GITHUB_WORKSPACE}
-
       - name: Check out source code
         uses: actions/checkout@v4
         with:
@@ -36,7 +32,7 @@ jobs:
 
       - name: Run cmake
         run: |
-          mkdir ${GITHUB_WORKSPACE}/build
+          mkdir -p ${GITHUB_WORKSPACE}/build
           cd ${GITHUB_WORKSPACE}/build
           if [[ -f /opt/rh/gcc-toolset-10/enable ]] ; then source /opt/rh/gcc-toolset-10/enable ; fi
           cmake -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install -DCMAKE_RULE_MESSAGES=OFF -DCMAKE_VERBOSE_MAKEFILE=ON -DENABLE_COVERAGE=ON -DENABLE_LIBUNWIND=ON -DENABLE_LUAJIT=ON -DLUA_ROOT=/luajit-build -DENABLE_HYPERSCAN=ON ${{ env.HYPERSCAN_ALTROOT }} ${GITHUB_WORKSPACE}/src
@@ -50,30 +46,105 @@ jobs:
           make -j $ncpu rspamd-test
           make -j $ncpu rspamd-test-cxx
 
-      - name: Prepare config
+      - name: Prepare test configuration under install prefix
         run: |
-          mkdir -p test-cfg/local.d
-          cp -r src/conf/* test-cfg/
-          echo 'static_dir = "../../interface";' > test-cfg/local.d/worker-controller.inc
-          echo "log_file = "";\ntype = \"console\";\nlevel = \"info\";\n" > test-cfg/local.d/logging.inc
-          ls -la test-cfg
-          cat test-cfg/local.d/logging.inc
+          # create the etc/rspamd tree under the install prefix
+          mkdir -p ${GITHUB_WORKSPACE}/install/etc/rspamd/local.d
+          # copy the shipped default conf
+          cp -r src/conf/* ${GITHUB_WORKSPACE}/install/etc/rspamd/
+          # override worker-controller to point at the WebUI build
+          echo "static_dir = \"${GITHUB_WORKSPACE}/install/share/rspamd/www\";" > ${GITHUB_WORKSPACE}/install/etc/rspamd/local.d/worker-controller.inc
+          # override logging to console (so no file-lock errors)
+          cat > ${GITHUB_WORKSPACE}/install/etc/rspamd/local.d/logging.inc << 'EOF'
+          type = "console";
+          level = "silent";
+          EOF
+          # Disable multimap module to prevent hyperscan cache issues at runtime
+          echo 'enabled = false;' > ${GITHUB_WORKSPACE}/install/etc/rspamd/local.d/multimap.conf
+          # We still need this for other modules
+          mkdir -p /var/lib/rspamd
+          # Disable redis dependent modules for WebUI tests
+          echo 'redis { enabled = false; }' > ${GITHUB_WORKSPACE}/install/etc/rspamd/local.d/modules.conf
+
       - name: Install curl
         run: yum install -y curl || apt-get update && apt-get install -y curl
-      - name: Start rspamd
+
+      - name: Start rspamd and wait for WebUI
+        shell: bash -e {0}
         run: |
-          ${GITHUB_WORKSPACE}/build/src/rspamd -c test-cfg/rspamd.conf --no-fork --insecure &
-          for i in {1..10}; do curl -sf http://localhost:11334/ && exit 0 || sleep 2; done
+          # Ensure runtime and cache directories exist and are writable
+          sudo mkdir -p /var/run/rspamd /var/lib/rspamd
+          sudo chown $USER:$USER /var/run/rspamd /var/lib/rspamd
+          ${GITHUB_WORKSPACE}/install/bin/rspamd \
+            -c ${GITHUB_WORKSPACE}/install/etc/rspamd/rspamd.conf \
+            --insecure &
+          sleep 5 # Give rspamd more time in debug mode
+
+          for i in $(seq 1 150); do
+            http_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:11334/ping || true)
+            if [[ "$http_code" == "200" ]]; then
+              echo "Rspamd WebUI is up (HTTP 200)"
+              exit 0
+            elif [[ "$http_code" != "000" ]]; then
+              echo "Unexpected HTTP code $http_code from /ping; failing"
+              exit 1
+            fi
+            echo "Waiting for rspamd..."
+            sleep 2
+          done
+
           echo "ERROR: rspamd WebUI did not become available on http://localhost:11334/"
           exit 1
-      - name: Setup Node.js
+
+      - name: Check rspamd status before tests
+        shell: bash -e {0}
+        run: |
+          if [ ! -f /var/run/rspamd/rspamd.pid ]; then
+            echo "ERROR: rspamd PID file not found"
+            exit 1
+          fi
+          pid=$(cat /var/run/rspamd/rspamd.pid)
+          if ! kill -0 $pid 2>/dev/null; then
+            echo "ERROR: rspamd process $pid is not running"
+            exit 1
+          fi
+          http_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:11334/ping || true)
+          if [[ "$http_code" != "200" ]]; then
+            echo "ERROR: rspamd WebUI is not responding (HTTP $http_code)"
+            exit 1
+          fi
+          echo "rspamd is running with PID $pid and WebUI is responding"
+          # Debug: check what WebUI returns
+          echo "Checking WebUI resources:"
+          for path in "/index.html" "/css/rspamd.css" "/js/main.js" "/img/rspamd_logo_navbar.png"; do
+            echo "Checking $path..."
+            http_code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:11334$path" || true)
+            if [[ "$http_code" != "200" ]]; then
+              echo "ERROR: Failed to load $path (HTTP $http_code)"
+              curl -v "http://localhost:11334$path"
+              exit 1
+            fi
+          done
+          echo "All key WebUI resources are accessible"
+
+      - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
       - name: Install Playwright
-        run: npm install -g playwright
+        working-directory: src/test/webui-e2e
+        run: npm install --no-save @playwright/test
+      - name: Prepare browser cache directory
+        run: |
+          mkdir -p /root/.cache
+          chown -R root:root /root/.cache
       - name: Install browsers
+        working-directory: src/test/webui-e2e
+        env:
+          HOME: /root
         run: npx playwright install --with-deps ${{ matrix.browser }}
       - name: Run WebUI E2E tests
-        run: npx playwright test --project=${{ matrix.browser }}
         working-directory: src/test/webui-e2e
+        env:
+          HOME: /root
+        run: npx playwright test --project=${{ matrix.browser }}
