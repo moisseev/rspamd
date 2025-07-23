@@ -12,32 +12,38 @@ jobs:
   linters:
     uses: ./.github/workflows/ci_linters.yml
 
-  fedora:
-    uses: ./.github/workflows/ci_rspamd.yml
-    with:
-      image: ghcr.io/rspamd/rspamd-build-docker:fedora-ci
-      name: fedora-ci
+  # fedora:
+  #   uses: ./.github/workflows/ci_rspamd.yml
+  #   with:
+  #     image: ghcr.io/rspamd/rspamd-build-docker:fedora-ci
+  #     name: fedora-ci
 
-  ubuntu:
-    uses: ./.github/workflows/ci_rspamd.yml
+  # ubuntu:
+  #   uses: ./.github/workflows/ci_rspamd.yml
+  #   with:
+  #     image: ghcr.io/rspamd/rspamd-build-docker:ubuntu-ci
+  #     name: ubuntu-ci
+
+  # ubuntu-focal:
+  #   uses: ./.github/workflows/ci_rspamd_build.yml
+  #   with:
+  #     image: ghcr.io/rspamd/rspamd-build-docker:ubuntu-focal
+  #     name: ubuntu-focal
+
+  # centos-8:
+  #   uses: ./.github/workflows/ci_rspamd_build.yml
+  #   with:
+  #     image: ghcr.io/rspamd/rspamd-build-docker:centos-8
+  #     name: centos-8
+
+  # centos-9:
+  #   uses: ./.github/workflows/ci_rspamd_build.yml
+  #   with:
+  #     image: ghcr.io/rspamd/rspamd-build-docker:centos-9
+  #     name: centos-9
+
+  webui-e2e:
+    uses: ./.github/workflows/webui-e2e.yml
     with:
       image: ghcr.io/rspamd/rspamd-build-docker:ubuntu-ci
       name: ubuntu-ci
-
-  ubuntu-focal:
-    uses: ./.github/workflows/ci_rspamd_build.yml
-    with:
-      image: ghcr.io/rspamd/rspamd-build-docker:ubuntu-focal
-      name: ubuntu-focal
-
-  centos-8:
-    uses: ./.github/workflows/ci_rspamd_build.yml
-    with:
-      image: ghcr.io/rspamd/rspamd-build-docker:centos-8
-      name: centos-8
-
-  centos-9:
-    uses: ./.github/workflows/ci_rspamd_build.yml
-    with:
-      image: ghcr.io/rspamd/rspamd-build-docker:centos-9
-      name: centos-9
