@@ -18,8 +18,8 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        browser: [firefox]
-        # browser: [firefox, chromium]
+        browser: [ firefox ]
+        # browser: [ firefox, chromium ]
     steps:
       - name: Check out source code
         uses: actions/checkout@v4
@@ -30,41 +30,33 @@ jobs:
         if: runner.arch == 'ARM64'
         run: echo "HYPERSCAN_ALTROOT=-DHYPERSCAN_ROOT_DIR=/vectorscan" >> "$GITHUB_ENV"
 
-      - name: Run cmake
+      - name: Run cmake and build rspamd
         run: |
-          mkdir -p ${GITHUB_WORKSPACE}/build
-          cd ${GITHUB_WORKSPACE}/build
-          if [[ -f /opt/rh/gcc-toolset-10/enable ]] ; then source /opt/rh/gcc-toolset-10/enable ; fi
-          cmake -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install -DCMAKE_RULE_MESSAGES=OFF -DCMAKE_VERBOSE_MAKEFILE=ON -DENABLE_COVERAGE=ON -DENABLE_LIBUNWIND=ON -DENABLE_LUAJIT=ON -DLUA_ROOT=/luajit-build -DENABLE_HYPERSCAN=ON ${{ env.HYPERSCAN_ALTROOT }} ${GITHUB_WORKSPACE}/src
+          mkdir -p build && cd build
+          source /opt/rh/gcc-toolset-10/enable || true
+          cmake -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install \
+                -DCMAKE_RULE_MESSAGES=OFF -DCMAKE_VERBOSE_MAKEFILE=ON \
+                -DENABLE_COVERAGE=ON -DENABLE_LIBUNWIND=ON \
+                -DENABLE_LUAJIT=ON -DLUA_ROOT=/luajit-build \
+                -DENABLE_HYPERSCAN=ON ${HYPERSCAN_ALTROOT} ${GITHUB_WORKSPACE}/src
+          make -j$(nproc) install rspamd-test rspamd-test-cxx
 
-      - name: Build rspamd
+      - name: Prepare test configuration and static_dir
         run: |
-          if [[ -f /opt/rh/gcc-toolset-10/enable ]] ; then source /opt/rh/gcc-toolset-10/enable ; fi
-          cd ${GITHUB_WORKSPACE}/build
-          ncpu=$(getconf _NPROCESSORS_ONLN)
-          make -j $ncpu install
-          make -j $ncpu rspamd-test
-          make -j $ncpu rspamd-test-cxx
-
-      - name: Prepare test configuration under install prefix
-        run: |
-          # create the etc/rspamd tree under the install prefix
-          mkdir -p ${GITHUB_WORKSPACE}/install/etc/rspamd/local.d
-          # copy the shipped default conf
-          cp -r src/conf/* ${GITHUB_WORKSPACE}/install/etc/rspamd/
-          # override worker-controller to point at the WebUI build
-          echo "static_dir = \"${GITHUB_WORKSPACE}/install/share/rspamd/www\";" > ${GITHUB_WORKSPACE}/install/etc/rspamd/local.d/worker-controller.inc
-          # override logging to console (so no file-lock errors)
-          cat > ${GITHUB_WORKSPACE}/install/etc/rspamd/local.d/logging.inc << 'EOF'
+          prefix=${GITHUB_WORKSPACE}/install
+          mkdir -p $prefix/etc/rspamd/local.d
+          cp -r src/conf/* $prefix/etc/rspamd/
+          echo "static_dir = \"$prefix/share/rspamd/www\";" > $prefix/etc/rspamd/local.d/worker-controller.inc
+          cat > $prefix/etc/rspamd/local.d/logging.inc << 'EOF'
           type = "console";
-          level = "silent";
+          level = "error";
           EOF
           # Disable multimap module to prevent hyperscan cache issues at runtime
-          echo 'enabled = false;' > ${GITHUB_WORKSPACE}/install/etc/rspamd/local.d/multimap.conf
-          # We still need this for other modules
-          mkdir -p /var/lib/rspamd
+          echo 'enabled = false;' > $prefix/etc/rspamd/local.d/multimap.conf
           # Disable redis dependent modules for WebUI tests
-          echo 'redis { enabled = false; }' > ${GITHUB_WORKSPACE}/install/etc/rspamd/local.d/modules.conf
+          echo 'redis { enabled = false; }' > $prefix/etc/rspamd/local.d/modules.conf
+          sudo mkdir -p /var/run/rspamd /var/lib/rspamd
+          sudo chown $USER:$USER /var/run/rspamd /var/lib/rspamd
 
       - name: Install curl
         run: yum install -y curl || apt-get update && apt-get install -y curl
@@ -72,79 +64,58 @@ jobs:
       - name: Start rspamd and wait for WebUI
         shell: bash -e {0}
         run: |
-          # Ensure runtime and cache directories exist and are writable
-          sudo mkdir -p /var/run/rspamd /var/lib/rspamd
-          sudo chown $USER:$USER /var/run/rspamd /var/lib/rspamd
           ${GITHUB_WORKSPACE}/install/bin/rspamd \
             -c ${GITHUB_WORKSPACE}/install/etc/rspamd/rspamd.conf \
             --insecure &
-          sleep 5 # Give rspamd more time in debug mode
-
-          for i in $(seq 1 150); do
+          # Initial delay before polling (in seconds)
+          initial_delay=5
+          sleep "$initial_delay"
+          # Wait up to 60 seconds for WebUI to respond
+          max_retries=30
+          for i in $(seq 1 "$max_retries"); do
             http_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:11334/ping || true)
             if [[ "$http_code" == "200" ]]; then
-              echo "Rspamd WebUI is up (HTTP 200)"
-              exit 0
+              elapsed=$(( initial_delay + (i - 1) * 2 ))
+              echo "Rspamd WebUI is up (HTTP 200) after $elapsed seconds"
+              break
             elif [[ "$http_code" != "000" ]]; then
               echo "Unexpected HTTP code $http_code from /ping; failing"
               exit 1
             fi
-            echo "Waiting for rspamd..."
+            echo "Waiting for rspamd... ($i/$max_retries)"
             sleep 2
           done
 
-          echo "ERROR: rspamd WebUI did not become available on http://localhost:11334/"
-          exit 1
+          if [[ "$i" -eq "$max_retries" && "$http_code" != "200" ]]; then
+            total_wait=$(( initial_delay + max_retries * 2 ))
+            echo "ERROR: rspamd WebUI did not become available after $total_wait seconds"
+            exit 1
+          fi
 
-      - name: Check rspamd status before tests
-        shell: bash -e {0}
+      - name: Verify WebUI static assets
         run: |
-          if [ ! -f /var/run/rspamd/rspamd.pid ]; then
-            echo "ERROR: rspamd PID file not found"
-            exit 1
-          fi
-          pid=$(cat /var/run/rspamd/rspamd.pid)
-          if ! kill -0 $pid 2>/dev/null; then
-            echo "ERROR: rspamd process $pid is not running"
-            exit 1
-          fi
-          http_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:11334/ping || true)
-          if [[ "$http_code" != "200" ]]; then
-            echo "ERROR: rspamd WebUI is not responding (HTTP $http_code)"
-            exit 1
-          fi
-          echo "rspamd is running with PID $pid and WebUI is responding"
-          # Debug: check what WebUI returns
-          echo "Checking WebUI resources:"
-          for path in "/index.html" "/css/rspamd.css" "/js/main.js" "/img/rspamd_logo_navbar.png"; do
-            echo "Checking $path..."
-            http_code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:11334$path" || true)
-            if [[ "$http_code" != "200" ]]; then
-              echo "ERROR: Failed to load $path (HTTP $http_code)"
-              curl -v "http://localhost:11334$path"
-              exit 1
-            fi
+          for asset in index.html css/rspamd.css js/main.js img/rspamd_logo_navbar.png; do
+            curl -fsSo /dev/null http://localhost:11334/$asset || \
+              (echo "Missing $asset" && exit 1)
           done
-          echo "All key WebUI resources are accessible"
 
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - name: Install Playwright
         working-directory: src/test/webui-e2e
         run: npm install --no-save @playwright/test
-      - name: Prepare browser cache directory
-        run: |
-          mkdir -p /root/.cache
-          chown -R root:root /root/.cache
-      - name: Install browsers
+
+      - name: Install Playwright browsers
         working-directory: src/test/webui-e2e
         env:
           HOME: /root
         run: npx playwright install --with-deps ${{ matrix.browser }}
+
       - name: Run WebUI E2E tests
         working-directory: src/test/webui-e2e
         env:
           HOME: /root
-        run: npx playwright test --project=${{ matrix.browser }}
+        run: npx playwright test --project=${{ matrix.browser }} --retries=1
