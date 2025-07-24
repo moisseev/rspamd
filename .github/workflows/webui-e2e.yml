@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         browser: [ firefox ]
-        # browser: [ firefox, chromium ]
+        # browser: [ firefox, chromium, webkit ]
     steps:
       - name: Check out source code
         uses: actions/checkout@v4
@@ -30,11 +30,14 @@ jobs:
         if: runner.arch == 'ARM64'
         run: echo "HYPERSCAN_ALTROOT=-DHYPERSCAN_ROOT_DIR=/vectorscan" >> "$GITHUB_ENV"
 
+      - name: Define install prefix
+        run: echo "PREFIX=${GITHUB_WORKSPACE}/install" >> "$GITHUB_ENV"
+
       - name: Run cmake and build rspamd
         run: |
           mkdir -p build && cd build
           source /opt/rh/gcc-toolset-10/enable || true
-          cmake -DCMAKE_INSTALL_PREFIX=${GITHUB_WORKSPACE}/install \
+          cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} \
                 -DCMAKE_RULE_MESSAGES=OFF -DCMAKE_VERBOSE_MAKEFILE=ON \
                 -DENABLE_COVERAGE=ON -DENABLE_LIBUNWIND=ON \
                 -DENABLE_LUAJIT=ON -DLUA_ROOT=/luajit-build \
@@ -43,18 +46,17 @@ jobs:
 
       - name: Prepare test configuration and static_dir
         run: |
-          prefix=${GITHUB_WORKSPACE}/install
-          mkdir -p $prefix/etc/rspamd/local.d
-          cp -r src/conf/* $prefix/etc/rspamd/
-          echo "static_dir = \"$prefix/share/rspamd/www\";" > $prefix/etc/rspamd/local.d/worker-controller.inc
-          cat > $prefix/etc/rspamd/local.d/logging.inc << 'EOF'
+          mkdir -p ${PREFIX}/etc/rspamd/local.d
+          cp -r src/conf/* ${PREFIX}/etc/rspamd/
+          echo "static_dir = \"${PREFIX}/share/rspamd/www\";" > ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
+          cat > ${PREFIX}/etc/rspamd/local.d/logging.inc << 'EOF'
           type = "console";
           level = "error";
           EOF
           # Disable multimap module to prevent hyperscan cache issues at runtime
-          echo 'enabled = false;' > $prefix/etc/rspamd/local.d/multimap.conf
+          echo 'enabled = false;' > ${PREFIX}/etc/rspamd/local.d/multimap.conf
           # Disable redis dependent modules for WebUI tests
-          echo 'redis { enabled = false; }' > $prefix/etc/rspamd/local.d/modules.conf
+          echo 'redis { enabled = false; }' > ${PREFIX}/etc/rspamd/local.d/modules.conf
           sudo mkdir -p /var/run/rspamd /var/lib/rspamd
           sudo chown $USER:$USER /var/run/rspamd /var/lib/rspamd
 
@@ -64,8 +66,8 @@ jobs:
       - name: Start rspamd and wait for WebUI
         shell: bash -e {0}
         run: |
-          ${GITHUB_WORKSPACE}/install/bin/rspamd \
-            -c ${GITHUB_WORKSPACE}/install/etc/rspamd/rspamd.conf \
+          ${PREFIX}/bin/rspamd \
+            -c ${PREFIX}/etc/rspamd/rspamd.conf \
             --insecure &
           # Initial delay before polling (in seconds)
           initial_delay=5
@@ -108,6 +110,12 @@ jobs:
         working-directory: src/test/webui-e2e
         run: npm install --no-save @playwright/test
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: /root/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ matrix.browser }}
+
       - name: Install Playwright browsers
         working-directory: src/test/webui-e2e
         env:
@@ -119,3 +127,11 @@ jobs:
         env:
           HOME: /root
         run: npx playwright test --project=${{ matrix.browser }} --retries=1
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: src/test/webui-e2e/playwright-report/
+          retention-days: 1
