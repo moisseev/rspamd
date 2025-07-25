@@ -12,7 +12,8 @@ const config = {
     ],
     retries: 1,
     testDir: "./tests",
-    timeout: 30000
+    timeout: 30000,
+    reporter: [['html', { outputFolder: 'playwright-report', open: 'never' }]],
 };
 
 export default config;

@@ -120,12 +120,19 @@ jobs:
         working-directory: src/test/webui-e2e
         env:
           HOME: /root
-        run: npx playwright test --project=${{ matrix.browser }} --retries=1
+        run: npx playwright test --project=${{ matrix.browser }} --retries=1 --reporter=html
 
-      - name: Upload Playwright report on failure
-        if: failure()
+      - name: List Playwright report directory before upload
+        if: always()
+        run: |
+          echo "Listing playwright-report directory before upload:"
+          ls -l src/test/webui-e2e/playwright-report/ || true
+
+      - name: Upload Playwright report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report-${{ matrix.browser }}
           path: src/test/webui-e2e/playwright-report/
           retention-days: 1
+          if-no-files-found: ignore
