@@ -18,11 +18,11 @@ jobs:
   #     image: ghcr.io/rspamd/rspamd-build-docker:fedora-ci
   #     name: fedora-ci
 
-  # ubuntu:
-  #   uses: ./.github/workflows/ci_rspamd.yml
-  #   with:
-  #     image: ghcr.io/rspamd/rspamd-build-docker:ubuntu-ci
-  #     name: ubuntu-ci
+  ubuntu:
+    uses: ./.github/workflows/ci_rspamd.yml
+    with:
+      image: ghcr.io/rspamd/rspamd-build-docker:ubuntu-ci
+      name: ubuntu-ci
 
   # ubuntu-focal:
   #   uses: ./.github/workflows/ci_rspamd_build.yml
@@ -43,6 +43,7 @@ jobs:
   #     name: centos-9
 
   webui-e2e:
+    needs: ubuntu
     uses: ./.github/workflows/webui-e2e.yml
     with:
       image: ghcr.io/rspamd/rspamd-build-docker:ubuntu-ci

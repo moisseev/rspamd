@@ -26,23 +26,14 @@ jobs:
         with:
           path: src
 
-      - name: Set variables on ARM64
-        if: runner.arch == 'ARM64'
-        run: echo "HYPERSCAN_ALTROOT=-DHYPERSCAN_ROOT_DIR=/vectorscan" >> "$GITHUB_ENV"
-
       - name: Define install prefix
         run: echo "PREFIX=${GITHUB_WORKSPACE}/install" >> "$GITHUB_ENV"
 
-      - name: Run cmake and build rspamd
-        run: |
-          mkdir -p build && cd build
-          source /opt/rh/gcc-toolset-10/enable || true
-          cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} \
-                -DCMAKE_RULE_MESSAGES=OFF -DCMAKE_VERBOSE_MAKEFILE=ON \
-                -DENABLE_COVERAGE=ON -DENABLE_LIBUNWIND=ON \
-                -DENABLE_LUAJIT=ON -DLUA_ROOT=/luajit-build \
-                -DENABLE_HYPERSCAN=ON ${HYPERSCAN_ALTROOT} ${GITHUB_WORKSPACE}/src
-          make -j$(nproc) install rspamd-test rspamd-test-cxx
+      - name: Download rspamd binary from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: rspamd-binary-ubuntu-ci
+          path: ${{ env.PREFIX }}
 
       - name: Prepare test configuration and static_dir
         run: |
@@ -62,6 +53,9 @@ jobs:
 
       - name: Install curl
         run: yum install -y curl || apt-get update && apt-get install -y curl
+
+      - name: Make rspamd binary executable
+        run: chmod +x ${PREFIX}/bin/rspamd
 
       - name: Start rspamd and wait for WebUI
         shell: bash -e {0}

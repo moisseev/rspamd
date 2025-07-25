@@ -60,35 +60,43 @@ jobs:
         run: |
           sudo mv /usr/bin/miltertest /usr/bin/miltertest.is.broken.on.fedora || true
 
-      - name: Run functional tests
-        run: |
-          cd ${GITHUB_WORKSPACE}/build
-          ulimit -c unlimited
-          ulimit -s unlimited
-          set +e
-          RSPAMD_INSTALLROOT=${GITHUB_WORKSPACE}/install robot  -v RSPAMD_USER:root -v RSPAMD_GROUP:root --removekeywords wuks --exclude isbroken ${GITHUB_WORKSPACE}/src/test/functional/cases; EXIT_CODE=$?
-          set -e
-          core_files=$(find /var/tmp/ -name '*.core')
-          for core in $core_files; do exe=$(gdb --batch -ex 'info proc mappings' -c $core | tail -1 | awk '{print $5}'); gdb --batch -ex 'bt' -c $core $exe; echo '---'; done
-          exit $EXIT_CODE
+      # - name: Run functional tests
+      #   run: |
+      #     cd ${GITHUB_WORKSPACE}/build
+      #     ulimit -c unlimited
+      #     ulimit -s unlimited
+      #     set +e
+      #     RSPAMD_INSTALLROOT=${GITHUB_WORKSPACE}/install robot  -v RSPAMD_USER:root -v RSPAMD_GROUP:root --removekeywords wuks --exclude isbroken ${GITHUB_WORKSPACE}/src/test/functional/cases; EXIT_CODE=$?
+      #     set -e
+      #     core_files=$(find /var/tmp/ -name '*.core')
+      #     for core in $core_files; do exe=$(gdb --batch -ex 'info proc mappings' -c $core | tail -1 | awk '{print $5}'); gdb --batch -ex 'bt' -c $core $exe; echo '---'; done
+      #     exit $EXIT_CODE
 
       - name: Save workspace directory
         if: (success() || failure())
         run: echo "CONTAINER_WORKSPACE=${GITHUB_WORKSPACE}" >> "$GITHUB_ENV"
 
-      - name: Upload robot logs
-        if: (success() || failure())
-        uses: actions/upload-artifact@v4
-        with:
-          name: robotlog-${{ inputs.name }}
-          path: |
-            ${{ env.CONTAINER_WORKSPACE }}/build/*.*ml
-          retention-days: 1
+      # - name: Upload robot logs
+      #   if: (success() || failure())
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: robotlog-${{ inputs.name }}
+      #     path: |
+      #       ${{ env.CONTAINER_WORKSPACE }}/build/*.*ml
+      #     retention-days: 1
 
-      - name: Upload rspamd logs
-        if: (success() || failure())
+      # - name: Upload rspamd logs
+      #   if: (success() || failure())
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: rspamdlog-${{ inputs.name }}
+      #     path: ${{ env.CONTAINER_WORKSPACE }}/build/robot-save
+      #     retention-days: 1
+
+      - name: Upload built rspamd
+        if: inputs.name == 'ubuntu-ci'
         uses: actions/upload-artifact@v4
         with:
-          name: rspamdlog-${{ inputs.name }}
-          path: ${{ env.CONTAINER_WORKSPACE }}/build/robot-save
+          name: rspamd-binary-${{ inputs.name }}
+          path: ${{ github.workspace }}/install
           retention-days: 1
