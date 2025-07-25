@@ -10,10 +10,10 @@ const config = {
             use: {browserName: "chromium"}
         }
     ],
+    reporter: [["html", {open: "never", outputFolder: "playwright-report"}]],
     retries: 1,
     testDir: "./tests",
     timeout: 30000,
-    reporter: [['html', { outputFolder: 'playwright-report', open: 'never' }]],
 };
 
 export default config;

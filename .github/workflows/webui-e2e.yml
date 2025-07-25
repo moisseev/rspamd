@@ -120,7 +120,7 @@ jobs:
         working-directory: src/test/webui-e2e
         env:
           HOME: /root
-        run: npx playwright test --project=${{ matrix.browser }} --retries=1 --reporter=html
+        run: npx playwright test --project=${{ matrix.browser }}
 
       - name: List Playwright report directory before upload
         if: always()
