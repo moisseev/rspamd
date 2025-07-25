@@ -1,6 +1,6 @@
 import {expect, test} from "@playwright/test";
 
-const baseUrl = "http://localhost:11334/index.html";
+const baseUrl = "http://localhost:11334";
 
 test.describe("WebUI smoke test", () => {
     test("should load WebUI and show main elements", async ({page}) => {
