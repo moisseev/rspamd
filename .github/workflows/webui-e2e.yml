@@ -122,12 +122,6 @@ jobs:
           HOME: /root
         run: npx playwright test --project=${{ matrix.browser }}
 
-      - name: List Playwright report directory before upload
-        if: always()
-        run: |
-          echo "Listing playwright-report directory before upload:"
-          ls -l src/test/webui-e2e/playwright-report/ || true
-
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
