@@ -11,6 +11,11 @@ async function logAlertOnError(page, locator, fn) {
     }
 }
 
+// Вспомогательная функция для последовательного заполнения полей
+function fillSequentially(elements, values) {
+    return elements.reduce((promise, el, i) => promise.then(() => el.fill(values[i])), Promise.resolve());
+}
+
 test("Config page: always checks order error and valid save for actions", async ({page}) => {
     await page.goto("http://localhost:11334");
     await page.click("#configuration_nav");
@@ -39,9 +44,13 @@ test("Config page: always checks order error and valid save for actions", async 
     })());
     const fillableIndices = (await Promise.all(fillableChecks)).filter((i) => i !== null);
 
+    const fillableInputs = fillableIndices.map((i) => inputs.nth(i));
+
     // 1. Корректный порядок: строго убывающая последовательность
-    const correctOrder = fillableIndices.map((_, idx) => ((fillableIndices.length - idx) * 10).toString());
-    await Promise.all(fillableIndices.map((i, idx) => inputs.nth(i).fill(correctOrder[idx])));
+    const correctOrder = fillableIndices.map((_, idx) => (idx * 10).toString());
+
+    await fillSequentially(fillableInputs, correctOrder);
+
     await page.click("#saveActionsBtn");
 
     await logAlertOnError(page, alert, async () => {
@@ -53,13 +62,28 @@ test("Config page: always checks order error and valid save for actions", async 
     await page.click("#configuration_nav");
 
     const reloadedInputs = getInputs();
-    await Promise.all(fillableIndices.map((i) => expect(reloadedInputs.nth(i)).toBeVisible()));
-    const saved = await Promise.all(fillableIndices.map((i) => reloadedInputs.nth(i).inputValue()));
+    const reloadedCount = await reloadedInputs.count();
+
+    // Пересчитываем доступные для заполнения поля после перезагрузки
+    const reloadedFillableChecks = Array.from({length: reloadedCount}, (_, i) => (async () => {
+        const input = reloadedInputs.nth(i);
+        const isDisabled = await input.isDisabled();
+        const isReadOnly = await input.evaluate((el) => el.hasAttribute("readonly"));
+        return !isDisabled && !isReadOnly ? i : null;
+    })());
+    const reloadedFillableIndices = (await Promise.all(reloadedFillableChecks)).filter((i) => i !== null);
+    const reloadedFillableInputs = reloadedFillableIndices.map((i) => reloadedInputs.nth(i));
+
+    await Promise.all(reloadedFillableInputs.map((input) => expect(input).toBeVisible()));
+
+    const saved = await Promise.all(reloadedFillableInputs.map((input) => input.inputValue()));
     expect(saved).toEqual(correctOrder);
 
     // 2. Нарушаем порядок: возрастающая последовательность
-    const wrongOrder = fillableIndices.map((_, idx) => (idx * 10).toString());
-    await Promise.all(fillableIndices.map((i, idx) => reloadedInputs.nth(i).fill(wrongOrder[idx])));
+    const wrongOrder = reloadedFillableIndices.map((_, idx) => ((reloadedFillableIndices.length - idx) * 10).toString());
+
+    await fillSequentially(reloadedFillableInputs, wrongOrder);
+
     await page.click("#saveActionsBtn");
 
     await expect(alert).toBeVisible({timeout: 2000});
@@ -67,6 +91,7 @@ test("Config page: always checks order error and valid save for actions", async 
     expect(alertText).toContain("Incorrect order of actions thresholds");
 
     // Возвращаем исходные значения
-    await Promise.all(fillableIndices.map((i) => reloadedInputs.nth(i).fill(values[i])));
+    await fillSequentially(reloadedFillableInputs, values);
+
     await page.click("#saveActionsBtn");
 });
