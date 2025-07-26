@@ -84,4 +84,21 @@ export default [
             "sort-keys": "error",
         },
     },
+    {
+        // TestCafe E2E tests: allow Node.js globals and TestCafe API
+        files: ["test/webui-e2e/tests/*.js"],
+        languageOptions: {
+            ecmaVersion: 2020,
+            globals: {
+                fixture: "readonly", // TestCafe global
+                require: "readonly", // TestCafe tests run in Node.js, require is valid
+                test: "readonly", // TestCafe global
+            },
+            sourceType: "script",
+        },
+        rules: {
+            // TestCafe's Selector is not a constructor, so new-cap is not appropriate
+            "new-cap": "off",
+        },
+    },
 ];

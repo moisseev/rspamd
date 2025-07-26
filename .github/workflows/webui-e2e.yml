@@ -100,33 +100,21 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Playwright
+      - name: Install Xvfb and dependencies
+        run: |
+          apt-get update
+          apt-get install -y xvfb xauth xfonts-base
+
+      - name: Install Firefox
+        run: |
+          if ! command -v firefox > /dev/null; then
+            apt-get update
+            apt-get install -y firefox || \
+              (echo "ERROR: 'firefox' package not found." && exit 1)
+          fi
+
+      - name: Run WebUI E2E tests (TestCafe)
         working-directory: src/test/webui-e2e
-        run: npm install --no-save @playwright/test
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: /root/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ matrix.browser }}
-
-      - name: Install Playwright browsers
-        working-directory: src/test/webui-e2e
-        env:
-          HOME: /root
-        run: npx playwright install --with-deps ${{ matrix.browser }}
-
-      - name: Run WebUI E2E tests
-        working-directory: src/test/webui-e2e
-        env:
-          HOME: /root
-        run: npx playwright test --project=${{ matrix.browser }}
-
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-${{ matrix.browser }}
-          path: src/test/webui-e2e/playwright-report/
-          retention-days: 1
-          if-no-files-found: ignore
+        run: |
+          xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' \
+            npx testcafe "firefox:headless" tests/*.js --reporter spec
