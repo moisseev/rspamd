@@ -26,7 +26,7 @@ jobs:
         with:
           path: src
 
-      - name: Define install prefix
+      - name: Define PREFIX
         run: echo "PREFIX=${GITHUB_WORKSPACE}/install" >> "$GITHUB_ENV"
 
       - name: Download rspamd binary from build job
@@ -35,7 +35,7 @@ jobs:
           name: rspamd-binary-ubuntu-ci
           path: ${{ env.PREFIX }}
 
-      - name: Prepare test configuration and static_dir
+      - name: Prepare rspamd configuration
         run: |
           mkdir -p ${PREFIX}/etc/rspamd/local.d
           cp -r src/conf/* ${PREFIX}/etc/rspamd/
@@ -48,28 +48,32 @@ jobs:
           echo 'enabled = false;' > ${PREFIX}/etc/rspamd/local.d/multimap.conf
           # Disable redis dependent modules for WebUI tests
           echo 'redis { enabled = false; }' > ${PREFIX}/etc/rspamd/local.d/modules.conf
-          sudo mkdir -p /var/run/rspamd /var/lib/rspamd
-          sudo chown $USER:$USER /var/run/rspamd /var/lib/rspamd
+          mkdir -p /var/run/rspamd /var/lib/rspamd
+          chown $USER:$USER /var/run/rspamd /var/lib/rspamd
+          chmod +x ${PREFIX}/bin/rspamd
 
       - name: Install curl
-        run: yum install -y curl || apt-get update && apt-get install -y curl
+        run: |
+          if ! command -v curl > /dev/null; then
+            apt-get update
+            apt-get install -y curl
+          fi
 
-      - name: Make rspamd binary executable
-        run: chmod +x ${PREFIX}/bin/rspamd
-
-      - name: Start rspamd and wait for WebUI
+      - name: Start rspamd in background and wait for WebUI
         shell: bash -e {0}
         run: |
-          ${PREFIX}/bin/rspamd \
-            -c ${PREFIX}/etc/rspamd/rspamd.conf \
-            --insecure &
+          ${PREFIX}/bin/rspamd -c ${PREFIX}/etc/rspamd/rspamd.conf --insecure &
+
           # Initial delay before polling (in seconds)
           initial_delay=5
           sleep "$initial_delay"
+
           # Wait up to 60 seconds for WebUI to respond
           max_retries=30
           for i in $(seq 1 "$max_retries"); do
+            # Try HTTP request with detailed output
             http_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:11334/ping || true)
+
             if [[ "$http_code" == "200" ]]; then
               elapsed=$(( initial_delay + (i - 1) * 2 ))
               echo "Rspamd WebUI is up (HTTP 200) after $elapsed seconds"
@@ -78,7 +82,8 @@ jobs:
               echo "Unexpected HTTP code $http_code from /ping; failing"
               exit 1
             fi
-            echo "Waiting for rspamd... ($i/$max_retries)"
+
+            echo "Waiting for rspamd... ($i/$max_retries) - HTTP code: $http_code"
             sleep 2
           done
 
@@ -95,26 +100,11 @@ jobs:
               (echo "Missing $asset" && exit 1)
           done
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install Xvfb and dependencies
+      - name: Run TestCafe tests in separate container
         run: |
-          apt-get update
-          apt-get install -y xvfb xauth xfonts-base
-
-      - name: Install Firefox
-        run: |
-          if ! command -v firefox > /dev/null; then
-            apt-get update
-            apt-get install -y firefox || \
-              (echo "ERROR: 'firefox' package not found." && exit 1)
-          fi
-
-      - name: Run WebUI E2E tests (TestCafe)
-        working-directory: src/test/webui-e2e
-        run: |
-          xvfb-run --auto-servernum --server-args='-screen 0 1280x720x24' \
-            npx testcafe "firefox:headless" tests/*.js --reporter spec
+          docker run --rm \
+            --network host \
+            -v ${{ github.workspace }}/src/test/webui-e2e:/tests \
+            -w /tests \
+            testcafe/testcafe:latest \
+            testcafe "firefox:headless" tests/*.js --reporter spec
