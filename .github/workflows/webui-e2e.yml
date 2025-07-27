@@ -44,6 +44,7 @@ jobs:
           mkdir -p ${PREFIX}/etc/rspamd/local.d
           cp -r src/conf/* ${PREFIX}/etc/rspamd/
           echo "static_dir = \"${PREFIX}/share/rspamd/www\";" > ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
+          echo "bind_socket = \"*:11334\";" >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
           cat > ${PREFIX}/etc/rspamd/local.d/logging.inc << 'EOF'
           type = "console";
           level = "error";
@@ -79,6 +80,8 @@ jobs:
             if [[ "$http_code" == "200" ]]; then
               elapsed=$(( initial_delay + (i - 1) * 2 ))
               echo "Rspamd WebUI is up (HTTP 200) after $elapsed seconds"
+              echo "Checking if rspamd is listening on port 11334..."
+              grep -v "rem_address" /proc/net/tcp | grep ":2C4A" && echo "Port 11334 is listening" || echo "Port 11334 not found in listening ports"
               break
             elif [[ "$http_code" != "000" ]]; then
               echo "Unexpected HTTP code $http_code from /ping; failing"
@@ -92,6 +95,10 @@ jobs:
           if [[ "$i" -eq "$max_retries" && "$http_code" != "200" ]]; then
             total_wait=$(( initial_delay + max_retries * 2 ))
             echo "ERROR: rspamd WebUI did not become available after $total_wait seconds"
+            echo "Checking if rspamd is listening on port 11334..."
+            grep -v "rem_address" /proc/net/tcp | grep ":2C4A" || echo "Port 11334 not found in listening ports"
+            echo "Checking rspamd process..."
+            ps aux | grep rspamd || echo "No rspamd process found"
             exit 1
           fi
 
