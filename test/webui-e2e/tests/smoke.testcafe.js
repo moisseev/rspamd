@@ -3,7 +3,7 @@
     const {Selector} = require("testcafe");
 
     fixture("WebUI smoke test")
-        .page("http://localhost:11334");
+        .page("http://host.docker.internal:11334");
 
     test("should load WebUI and show main elements", async (t) => {
         const preloader = Selector("#preloader");

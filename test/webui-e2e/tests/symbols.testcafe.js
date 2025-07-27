@@ -3,7 +3,7 @@
     const {Selector} = require("testcafe");
 
     fixture("Symbols page test")
-        .page("http://localhost:11334");
+        .page("http://host.docker.internal:11334");
 
     test("Symbols page shows list of symbols and allows editing", async (t) => {
         const symbolsNav = Selector("#symbols_nav");

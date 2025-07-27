@@ -3,7 +3,7 @@
     const {Selector} = require("testcafe");
 
     fixture("Main page test")
-        .page("http://localhost:11334");
+        .page("http://host.docker.internal:11334");
 
     test("Main page is accessible and shows dashboard", async (t) => {
         const navBar = Selector("#navBar");
