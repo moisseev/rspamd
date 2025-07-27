@@ -1,5 +1,6 @@
 (function () {
     "use strict";
+
     fixture("API test")
         .page("http://localhost:11334");
 

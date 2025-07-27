@@ -13,6 +13,10 @@ on:
 jobs:
   e2e:
     runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged --shm-size=2g
     container:
       image: ${{ inputs.image }}
       options: --user root
@@ -52,12 +56,10 @@ jobs:
           chown $USER:$USER /var/run/rspamd /var/lib/rspamd
           chmod +x ${PREFIX}/bin/rspamd
 
-      - name: Install curl
+      - name: Install dependencies
         run: |
-          if ! command -v curl > /dev/null; then
-            apt-get update
-            apt-get install -y curl
-          fi
+          apt-get update
+          apt-get install -y curl docker.io
 
       - name: Start rspamd in background and wait for WebUI
         shell: bash -e {0}
@@ -102,9 +104,13 @@ jobs:
 
       - name: Run TestCafe tests in separate container
         run: |
+          # Wait for Docker daemon to be ready
+          timeout 30s sh -c 'until docker info; do sleep 1; done'
+
+          # Run TestCafe tests using the official Docker image
           docker run --rm \
             --network host \
             -v ${{ github.workspace }}/src/test/webui-e2e:/tests \
             -w /tests \
             testcafe/testcafe:latest \
-            testcafe "firefox:headless" tests/*.js --reporter spec
+            firefox:headless tests/*.js --reporter spec
