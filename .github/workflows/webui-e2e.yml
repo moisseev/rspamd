@@ -79,18 +79,16 @@ jobs:
               -c /__w/rspamd/rspamd/install/etc/rspamd/rspamd.conf \
               --insecure
 
-          # Wait for Docker daemon to be ready
-          timeout 30s sh -c 'until docker info; do sleep 1; done'
-
-          # Wait up to 240 seconds for WebUI to respond
-          max_retries=120
+          # Wait up to 360 seconds for WebUI to respond using curl container
+          max_retries=180
           for i in $(seq 1 "$max_retries"); do
-            # Try HTTP request with detailed output
-            http_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:11334/ping || true)
+            curl_output=$(docker run --rm --network host curlimages/curl:latest \
+              -s -S -v --max-time 5 http://localhost:11334/ping 2>&1 || true)
+            echo "$curl_output"
+            http_code=$(echo "$curl_output" | awk '/^< HTTP/{print $3}' | head -n1)
 
             if [[ "$http_code" == "200" ]]; then
               echo "Rspamd WebUI is up (HTTP 200) after $((i * 2)) seconds"
-              echo "Checking if rspamd is listening on port 11334..."
               docker exec rspamd-container netstat -tlnp | grep ":11334" && echo "Port 11334 is listening"
               break
             elif [[ "$http_code" != "000" ]]; then
@@ -113,6 +111,12 @@ jobs:
       - name: Debug rspamd container logs if it fails to start
         if: always()
         run: |
+          echo "::group::rspamadm configdump logging"
+          docker exec rspamd-container /__w/rspamd/rspamd/install/bin/rspamadm configdump logging || true
+          echo "::endgroup::"
+          echo "::group::rspamadm configdump worker-controller"
+          docker exec rspamd-container /__w/rspamd/rspamd/install/bin/rspamadm configdump worker-controller || true
+          echo "::endgroup::"
           echo "::group::Last 100 lines of container logs"
           docker logs rspamd-container --tail 100 || true
           echo "::endgroup::"
@@ -129,7 +133,7 @@ jobs:
       - name: Verify WebUI static assets
         run: |
           for asset in index.html css/rspamd.css js/main.js img/rspamd_logo_navbar.png; do
-            curl -fsSo /dev/null http://localhost:11334/$asset || (echo "Missing $asset" && exit 1)
+            curl -4 -fsSo /dev/null http://localhost:11334/$asset || (echo "Missing $asset" && exit 1)
           done
 
       - name: Run TestCafe tests in separate container
