@@ -44,7 +44,7 @@ jobs:
           echo "bind_socket = \"*:11334\";" >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
           cat > ${PREFIX}/etc/rspamd/local.d/logging.inc << 'EOF'
           type = "console";
-          level = "error";
+          level = "info";
           EOF
           # Disable multimap module to prevent hyperscan cache issues at runtime
           echo 'enabled = false;' > ${PREFIX}/etc/rspamd/local.d/multimap.conf
@@ -89,8 +89,8 @@ jobs:
           # Wait for Docker daemon to be ready
           timeout 30s sh -c 'until docker info; do sleep 1; done'
 
-          # Wait up to 60 seconds for WebUI to respond
-          max_retries=30
+          # Wait up to 120 seconds for WebUI to respond
+          max_retries=60
           for i in $(seq 1 "$max_retries"); do
             # Try HTTP request with detailed output
             http_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:11334/ping || true)
@@ -98,7 +98,7 @@ jobs:
             if [[ "$http_code" == "200" ]]; then
               echo "Rspamd WebUI is up (HTTP 200) after $((i * 2)) seconds"
               echo "Checking if rspamd is listening on port 11334..."
-              docker exec rspamd-container netstat -tlnp | grep ":11334" && echo "Port 11334 is listening" || echo "Port 11334 not found in listening ports"
+              docker exec rspamd-container netstat -tlnp | grep ":11334" && echo "Port 11334 is listening"
               break
             elif [[ "$http_code" != "000" ]]; then
               echo "Unexpected HTTP code $http_code from /ping; failing"
