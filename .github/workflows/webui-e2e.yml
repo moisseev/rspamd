@@ -40,7 +40,7 @@ jobs:
         run: |
           mkdir -p ${PREFIX}/etc/rspamd/local.d
           cp -a src/conf/. "${PREFIX}/etc/rspamd/"
-          echo "static_dir = \"/__w/rspamd/rspamd/install/share/rspamd/www\";" > ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
+          echo 'static_dir = "/__w/rspamd/rspamd/install/share/rspamd/www";' > ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
           echo "bind_socket = \"*:11334\";" >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
           cat > ${PREFIX}/etc/rspamd/local.d/logging.inc << 'EOF'
           type = "console";
@@ -56,13 +56,6 @@ jobs:
         run: |
           sudo mkdir -p /var/run/rspamd /var/lib/rspamd
           sudo chown $USER:$USER /var/run/rspamd /var/lib/rspamd
-
-      - name: Debug check shared libraries
-        run: |
-          echo "Looking for librspamd-server.so..."
-          find "${PREFIX}" -name "librspamd-server.so*" || echo "Library not found"
-          echo "Contents of lib dir:"
-          ls -l "${PREFIX}/lib" || true
 
       - name: Create network and start rspamd container
         shell: bash -e {0}
@@ -89,8 +82,8 @@ jobs:
           # Wait for Docker daemon to be ready
           timeout 30s sh -c 'until docker info; do sleep 1; done'
 
-          # Wait up to 120 seconds for WebUI to respond
-          max_retries=60
+          # Wait up to 240 seconds for WebUI to respond
+          max_retries=120
           for i in $(seq 1 "$max_retries"); do
             # Try HTTP request with detailed output
             http_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:11334/ping || true)
@@ -112,9 +105,7 @@ jobs:
           if [[ "$i" -eq "$max_retries" && "$http_code" != "200" ]]; then
             total_wait=$(( max_retries * 2 ))
             echo "ERROR: rspamd WebUI did not become available after $total_wait seconds"
-            echo "Checking if rspamd is listening on port 11334..."
-            docker exec rspamd-container netstat -tlnp | grep ":11334" || echo "Port 11334 not found in listening ports"
-            echo "Checking rspamd process..."
+            docker exec rspamd-container netstat -tlnp | grep ":11334" || echo "Port 11334 not found"
             docker exec rspamd-container ps aux | grep rspamd || echo "No rspamd process found"
             exit 1
           fi
@@ -122,20 +113,24 @@ jobs:
       - name: Debug rspamd container logs if it fails to start
         if: always()
         run: |
-          echo "Container logs:"
+          echo "::group::Last 100 lines of container logs"
+          docker logs rspamd-container --tail 100 || true
+          echo "::endgroup::"
+          echo "::group::Full container logs"
           docker logs rspamd-container || true
+          echo "::endgroup::"
           echo "Process list:"
           docker exec rspamd-container ps aux || true
-          echo "Filesystem contents of /opt/rspamd:"
-          docker exec rspamd-container ls -lR /opt/rspamd || true
+          echo "Filesystem contents of PREFIX:"
+          docker exec rspamd-container ls -lR /__w/rspamd/rspamd/install || true
           echo "Shared library check:"
-          docker exec rspamd-container ldd /opt/rspamd/bin/rspamd || true
+          docker exec rspamd-container ldd /__w/rspamd/rspamd/install/bin/rspamd || true
 
-      # - name: Verify WebUI static assets
-      #   run: |
-      #     for asset in index.html css/rspamd.css js/main.js img/rspamd_logo_navbar.png; do
-      #       curl -fsSo /dev/null http://localhost:11334/$asset || (echo "Missing $asset" && exit 1)
-      #     done
+      - name: Verify WebUI static assets
+        run: |
+          for asset in index.html css/rspamd.css js/main.js img/rspamd_logo_navbar.png; do
+            curl -fsSo /dev/null http://localhost:11334/$asset || (echo "Missing $asset" && exit 1)
+          done
 
       - name: Run TestCafe tests in separate container
         shell: bash -e {0}
