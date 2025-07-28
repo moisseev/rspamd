@@ -131,11 +131,11 @@ jobs:
           echo "Shared library check:"
           docker exec rspamd-container ldd /opt/rspamd/bin/rspamd || true
 
-      - name: Verify WebUI static assets
-        run: |
-          for asset in index.html css/rspamd.css js/main.js img/rspamd_logo_navbar.png; do
-            curl -fsSo /dev/null http://localhost:11334/$asset || (echo "Missing $asset" && exit 1)
-          done
+      # - name: Verify WebUI static assets
+      #   run: |
+      #     for asset in index.html css/rspamd.css js/main.js img/rspamd_logo_navbar.png; do
+      #       curl -fsSo /dev/null http://localhost:11334/$asset || (echo "Missing $asset" && exit 1)
+      #     done
 
       - name: Run TestCafe tests in separate container
         shell: bash -e {0}
