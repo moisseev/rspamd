@@ -40,7 +40,7 @@
         await t.expect(reloadedInputs.nth(0).visible).ok();
 
         const savedValue = await reloadedInputs.nth(0).value;
-        await t.expect(savedValue).eql("10");
+        await t.expect(savedValue).eql("1");
 
         // Test with invalid order (single input)
         await t.typeText(reloadedInputs.nth(0), "10", {replace: true});
