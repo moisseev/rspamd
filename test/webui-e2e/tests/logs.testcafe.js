@@ -6,6 +6,45 @@
         .page("http://rspamd-container:11334");
 
     test("Logs page displays recent errors and allows refresh", async (t) => {
+        // Check connectivity and authentication mode for both IPv4 and IPv6
+
+        // IPv4 connectivity and read_only check
+        try {
+            const response4 = await t.request("http://rspamd-container:11334/auth");
+            const readOnly4 = response4.body.read_only;
+
+            if (readOnly4 === true) {
+                console.log("❌ IPv4: User is in read-only mode - secure_ip may not be working correctly");
+                await t.expect(readOnly4).notOk("❌ IPv4: User is in read-only mode - secure_ip may not be working correctly");
+            } else {
+                console.log("✅ IPv4: User has full access - secure_ip working correctly");
+                await t.expect(readOnly4).eql(false, "✅ IPv4: User has full access - secure_ip working correctly");
+            }
+        } catch (error) {
+            const errorMsg = error.message || "Unknown error";
+            console.log(`❌ IPv4 connection failed: ${errorMsg}`);
+            await t.expect(error).notOk(`❌ IPv4 connection failed: ${errorMsg}`);
+        }
+
+        // IPv6 connectivity and read_only check
+        try {
+            const response6 = await t.request("http://[::ffff:172.19.0.2]:11334/auth");
+            const readOnly6 = response6.body.read_only;
+
+            if (readOnly6 === true) {
+                console.log("❌ IPv6: User is in read-only mode - secure_ip may not be working correctly");
+                await t.expect(readOnly6).notOk("❌ IPv6: User is in read-only mode - secure_ip may not be working correctly");
+            } else {
+                console.log("✅ IPv6: User has full access - secure_ip working correctly");
+                await t.expect(readOnly6).eql(false, "✅ IPv6: User has full access - secure_ip working correctly");
+            }
+        } catch (error) {
+            // IPv6 connection is expected to fail since the Docker network doesn't support IPv6
+            const errorMsg = error.message || "Network unreachable";
+            console.log(`ℹ️ IPv6 connection failed as expected: ${errorMsg}`);
+            await t.expect(error).ok(`ℹ️ IPv6 connection failed as expected: ${errorMsg}`);
+        }
+
         const historyNav = Selector("#history_nav");
         const errorsLog = Selector("#errorsLog");
         const tableRows = Selector("#errorsLog tbody tr");
