@@ -42,8 +42,9 @@ jobs:
           mkdir -p ${PREFIX}/etc/rspamd/local.d
           cp -a src/conf/. "${PREFIX}/etc/rspamd/"
           echo 'static_dir = "/__w/rspamd/rspamd/install/share/rspamd/www";' > ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
-          echo "bind_socket = \"*:11334\";" >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
-          echo 'secure_ip = ["0.0.0.0/0", "::/0"];' >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
+          echo 'bind_socket = "*:11334";' >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
+          echo 'secure_ip = "0.0.0.0/0";' >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
+          echo 'secure_ip = "::/0";' >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
           cat > ${PREFIX}/etc/rspamd/local.d/logging.inc << 'EOF'
           type = "console";
           level = "info";
@@ -165,7 +166,7 @@ jobs:
             curl -4 -fsSo /dev/null http://localhost:11334/$asset || (echo "Missing $asset" && exit 1)
           done
 
-      - name: Debug network connectivity from TestCafe container
+      - name: Debug network connectivity and authentication mode
         run: |
           echo "Testing connectivity from TestCafe container to rspamd:"
           docker run --rm --network rspamd-test-network curlimages/curl:latest \
@@ -176,6 +177,59 @@ jobs:
           docker run --rm --network host curlimages/curl:latest \
             -s -S --max-time 5 -w 'HTTP: %{http_code}, Time: %{time_total}s\n' \
             http://localhost:11334/ping || echo "Failed to connect"
+
+          echo "::group::IPv6 diagnostics"
+          echo "Docker network info:"
+          docker network inspect rspamd-test-network | grep -A 10 -B 5 "IPv6" || echo "No IPv6 info found"
+
+          echo "Container IPv6 addresses:"
+          docker exec rspamd-container ip -6 addr show || echo "No IPv6 addresses found"
+
+          echo "DNS resolution test (IPv6):"
+          docker run --rm --network rspamd-test-network curlimages/curl:latest \
+            -6 -s -S --max-time 5 --resolve rspamd-container:11334:127.0.0.1 \
+            http://rspamd-container:11334/ping || echo "DNS resolution failed"
+
+          echo "Direct IPv6 localhost test:"
+          docker run --rm --network rspamd-test-network curlimages/curl:latest \
+            -6 -s -S --max-time 5 http://[::1]:11334/ping || echo "IPv6 localhost failed"
+          echo "::endgroup::"
+
+          echo "::group::Authentication mode check"
+          echo "IPv4:"
+          response_4=$(docker run --rm --network rspamd-test-network curlimages/curl:latest \
+            -4 -s -S --max-time 10 -w '%{http_code}' http://rspamd-container:11334/auth)
+          http_code_4=${response_4: -3}
+          body_4=${response_4%???}
+
+          if [[ "$http_code_4" == "200" ]]; then
+            read_only_4=$(echo "$body_4" | grep -o '"read_only":[^,}]*' | cut -d':' -f2 | tr -d ' ')
+            if [[ "$read_only_4" == "false" ]]; then
+              echo "✅ IPv4 secure_ip working: read_only=false"
+            else
+              echo "❌ IPv4 secure_ip failed: read_only=$read_only_4"
+            fi
+          else
+            echo "❌ IPv4 connection failed: HTTP $http_code_4"
+          fi
+
+          echo "IPv6:"
+          response_6=$(docker run --rm --network rspamd-test-network curlimages/curl:latest \
+            -6 -s -S --max-time 10 -w '%{http_code}' http://rspamd-container:11334/auth)
+          http_code_6=${response_6: -3}
+          body_6=${response_6%???}
+
+          if [[ "$http_code_6" == "200" ]]; then
+            read_only_6=$(echo "$body_6" | grep -o '"read_only":[^,}]*' | cut -d':' -f2 | tr -d ' ')
+            if [[ "$read_only_6" == "false" ]]; then
+              echo "✅ IPv6 secure_ip working: read_only=false"
+            else
+              echo "❌ IPv6 secure_ip failed: read_only=$read_only_6"
+            fi
+          else
+            echo "❌ IPv6 connection failed: HTTP $http_code_6"
+          fi
+          echo "::endgroup::"
 
       - name: Run TestCafe tests in separate container
         shell: bash -e {0}
