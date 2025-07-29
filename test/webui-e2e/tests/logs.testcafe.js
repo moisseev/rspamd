@@ -3,7 +3,7 @@
     const {Selector} = require("testcafe");
 
     fixture("Logs page test")
-        .page("http://host.docker.internal:11334");
+        .page("http://rspamd-container:11334");
 
     test("Logs page displays recent errors and allows refresh", async (t) => {
         const historyNav = Selector("#history_nav");

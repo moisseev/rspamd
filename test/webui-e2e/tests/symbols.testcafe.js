@@ -3,7 +3,7 @@
     const {Selector} = require("testcafe");
 
     fixture("Symbols page test")
-        .page("http://host.docker.internal:11334");
+        .page("http://rspamd-container:11334");
 
     test("Symbols page shows list of symbols and allows editing", async (t) => {
         const symbolsNav = Selector("#symbols_nav");
@@ -43,7 +43,7 @@
         await t.click(saveButton);
 
         // Check for success notification
-        await t.expect(successAlert.visible).ok({timeout: 10000});
+        await t.expect(successAlert.visible).ok();
 
         // Restore old value
         await t.typeText(scoreInput, oldValue, {replace: true});

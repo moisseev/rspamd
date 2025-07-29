@@ -42,6 +42,8 @@ jobs:
           cp -a src/conf/. "${PREFIX}/etc/rspamd/"
           echo 'static_dir = "/__w/rspamd/rspamd/install/share/rspamd/www";' > ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
           echo "bind_socket = \"*:11334\";" >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
+          echo 'secure_ip = "0.0.0.0";' >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
+          echo 'secure_ip = "::/0";' >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
           cat > ${PREFIX}/etc/rspamd/local.d/logging.inc << 'EOF'
           type = "console";
           level = "info";
@@ -51,6 +53,7 @@ jobs:
           # Disable redis dependent modules for WebUI tests
           echo 'redis { enabled = false; }' > ${PREFIX}/etc/rspamd/local.d/modules.conf
           chmod +x ${PREFIX}/bin/rspamd
+          chmod +x ${PREFIX}/bin/rspamadm
 
       - name: Prepare host runtime dirs
         run: |
@@ -77,15 +80,21 @@ jobs:
             ghcr.io/rspamd/rspamd-build-docker:ubuntu-ci \
             /__w/rspamd/rspamd/install/bin/rspamd \
               -c /__w/rspamd/rspamd/install/etc/rspamd/rspamd.conf \
-              --insecure
+              --insecure -f
 
           # Wait up to 360 seconds for WebUI to respond using curl container
           max_retries=180
           for i in $(seq 1 "$max_retries"); do
-            curl_output=$(docker run --rm --network host curlimages/curl:latest \
-              -s -S -v --max-time 5 http://localhost:11334/ping 2>&1 || true)
-            echo "$curl_output"
-            http_code=$(echo "$curl_output" | awk '/^< HTTP/{print $3}' | head -n1)
+            # Use curl with write-out to get HTTP status code directly
+            http_code=$(docker run --rm --network host curlimages/curl:latest \
+              -s -S --max-time 5 -w '%{http_code}' -o /dev/null http://localhost:11334/ping 2>/dev/null || true)
+
+            # If curl failed or returned empty, set to "000"
+            if [[ -z "$http_code" ]]; then
+              http_code="000"
+            fi
+
+            echo "Attempt $i/$max_retries - HTTP code: $http_code"
 
             if [[ "$http_code" == "200" ]]; then
               echo "Rspamd WebUI is up (HTTP 200) after $((i * 2)) seconds"
@@ -94,6 +103,20 @@ jobs:
             elif [[ "$http_code" != "000" ]]; then
               echo "Unexpected HTTP code $http_code from /ping; failing"
               exit 1
+            fi
+
+            # Add diagnostic information every 10 attempts
+            if [[ $((i % 10)) -eq 0 ]]; then
+              echo "Diagnostic info at attempt $i:"
+              echo "Container status:"
+              docker ps | grep rspamd-container || echo "Container not running"
+              echo "Process list:"
+              docker exec rspamd-container ps aux | grep rspamd || echo "No rspamd process"
+              echo "Port status:"
+              docker exec rspamd-container netstat -tlnp | grep ":11334" || echo "Port 11334 not listening"
+              echo "Last 5 lines of logs:"
+              docker logs rspamd-container --tail 5 || echo "No logs available"
+              echo "---"
             fi
 
             echo "Waiting for rspamd... ($i/$max_retries) - HTTP code: $http_code"
@@ -111,11 +134,14 @@ jobs:
       - name: Debug rspamd container logs if it fails to start
         if: always()
         run: |
+          echo "::group::Container status"
+          docker ps -a | grep rspamd-container || echo "Container not found"
+          echo "::endgroup::"
           echo "::group::rspamadm configdump logging"
           docker exec rspamd-container /__w/rspamd/rspamd/install/bin/rspamadm configdump logging || true
           echo "::endgroup::"
-          echo "::group::rspamadm configdump worker-controller"
-          docker exec rspamd-container /__w/rspamd/rspamd/install/bin/rspamadm configdump worker-controller || true
+          echo "::group::rspamadm configdump worker"
+          docker exec rspamd-container /__w/rspamd/rspamd/install/bin/rspamadm configdump worker || true
           echo "::endgroup::"
           echo "::group::Last 100 lines of container logs"
           docker logs rspamd-container --tail 100 || true
@@ -125,16 +151,31 @@ jobs:
           echo "::endgroup::"
           echo "Process list:"
           docker exec rspamd-container ps aux || true
-          echo "Filesystem contents of PREFIX:"
+          echo "::group::Filesystem contents of PREFIX"
           docker exec rspamd-container ls -lR /__w/rspamd/rspamd/install || true
+          echo "::endgroup::"
           echo "Shared library check:"
           docker exec rspamd-container ldd /__w/rspamd/rspamd/install/bin/rspamd || true
+          echo "Port status:"
+          docker exec rspamd-container netstat -tlnp | grep ":11334" || echo "Port 11334 not listening"
 
       - name: Verify WebUI static assets
         run: |
           for asset in index.html css/rspamd.css js/main.js img/rspamd_logo_navbar.png; do
             curl -4 -fsSo /dev/null http://localhost:11334/$asset || (echo "Missing $asset" && exit 1)
           done
+
+      - name: Debug network connectivity from TestCafe container
+        run: |
+          echo "Testing connectivity from TestCafe container to rspamd:"
+          docker run --rm --network rspamd-test-network curlimages/curl:latest \
+            -s -S --max-time 5 -w 'HTTP: %{http_code}, Time: %{time_total}s\n' \
+            http://rspamd-container:11334/ping || echo "Failed to connect"
+
+          echo "Testing connectivity to localhost:"
+          docker run --rm --network host curlimages/curl:latest \
+            -s -S --max-time 5 -w 'HTTP: %{http_code}, Time: %{time_total}s\n' \
+            http://localhost:11334/ping || echo "Failed to connect"
 
       - name: Run TestCafe tests in separate container
         shell: bash -e {0}

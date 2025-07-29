@@ -3,7 +3,7 @@
     const {Selector} = require("testcafe");
 
     fixture("Error handling test")
-        .page("http://host.docker.internal:11334");
+        .page("http://rspamd-container:11334");
 
     test("Shows error alert if backend is unavailable", async (t) => {
         const errorAlert = Selector(".alert-error, .alert-modal.alert-error");
@@ -13,6 +13,6 @@
 
         // In WebUI alert-error appears only if error is handled through ajax (common.query).
         // If alert doesn't appear, test should not fail.
-        await t.expect(errorAlert.visible).notOk({timeout: 2000});
+        await t.expect(errorAlert.visible).notOk();
     });
 }());

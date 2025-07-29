@@ -1,0 +1,6 @@
+{
+  "pageRequestTimeout": 3000,
+  "ajaxRequestTimeout": 3000,
+  "selectorTimeout": 1000,
+  "assertionTimeout": 1000
+}

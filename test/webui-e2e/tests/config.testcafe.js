@@ -12,7 +12,7 @@
         const errorAlert = Selector(".alert-error, .alert-modal.alert-error");
 
         await t.click(configNav);
-        await t.expect(actionsFormField.visible).ok({timeout: 10000});
+        await t.expect(actionsFormField.visible).ok();
 
         // Get all action inputs
         const inputs = Selector("#actionsFormField input[data-id='action']");
@@ -30,7 +30,7 @@
         await t.click(saveActionsBtn);
 
         // Should not show error
-        await t.expect(errorAlert.visible).notOk({timeout: 2000});
+        await t.expect(errorAlert.visible).notOk();
 
         // Reload page and verify value is saved
         await t.eval(() => location.reload());
@@ -47,7 +47,7 @@
         await t.click(saveActionsBtn);
 
         // Should show error for invalid value
-        await t.expect(errorAlert.visible).ok({timeout: 2000});
+        await t.expect(errorAlert.visible).ok();
 
         // Restore original value
         await t.typeText(reloadedInputs.nth(0), originalValue, {replace: true});
