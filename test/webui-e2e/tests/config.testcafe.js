@@ -26,7 +26,7 @@
         const originalValue = await inputs.nth(0).value;
 
         // Test with correct order (single input)
-        await t.typeText(inputs.nth(0), "10", {replace: true});
+        await t.typeText(inputs.nth(0), "1", {replace: true});
         await t.click(saveActionsBtn);
 
         // Should not show error
@@ -41,6 +41,13 @@
 
         const savedValue = await reloadedInputs.nth(0).value;
         await t.expect(savedValue).eql("10");
+
+        // Test with invalid order (single input)
+        await t.typeText(reloadedInputs.nth(0), "10", {replace: true});
+        await t.click(saveActionsBtn);
+
+        // Should show error for invalid order
+        await t.expect(errorAlert.visible).ok();
 
         // Test with invalid value (negative number)
         await t.typeText(reloadedInputs.nth(0), "-5", {replace: true});
