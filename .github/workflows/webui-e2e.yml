@@ -64,7 +64,15 @@ jobs:
       - name: Create network and start rspamd container
         shell: bash -e {0}
         run: |
-          docker network create rspamd-test-network || true
+          # Create bridge-network with IPv6 support on
+          docker network rm rspamd-test-network || true
+          docker network create \
+            --driver=bridge \
+            --ipv6 \
+            --subnet=fd00:dead:beef::/64 \
+            --subnet=172.19.0.0/16 \
+            rspamd-test-network
+
           docker run -d \
             --name rspamd-container \
             --network rspamd-test-network \
@@ -91,9 +99,7 @@ jobs:
               -s -S --max-time 5 -w '%{http_code}' -o /dev/null http://localhost:11334/ping 2>/dev/null || true)
 
             # If curl failed or returned empty, set to "000"
-            if [[ -z "$http_code" ]]; then
-              http_code="000"
-            fi
+            if [[ -z "$http_code" ]]; then http_code="000"; fi
 
             echo "Attempt $i/$max_retries - HTTP code: $http_code"
 
