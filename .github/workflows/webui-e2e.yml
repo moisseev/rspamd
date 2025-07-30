@@ -219,22 +219,22 @@ jobs:
             echo "❌ IPv4 connection failed: HTTP $http_code_4"
           fi
 
-          # echo "IPv6:"
-          # response_6=$(docker run --rm --network rspamd-test-network curlimages/curl:latest \
-          #   -6 -s -S --max-time 10 -w '%{http_code}' http://rspamd-container:11334/auth)
-          # http_code_6=${response_6: -3}
-          # body_6=${response_6%???}
+          echo "IPv6:"
+          response_6=$(docker run --rm --network rspamd-test-network curlimages/curl:latest \
+            -6 -s -S --max-time 10 -w '%{http_code}' http://rspamd-container:11334/auth)
+          http_code_6=${response_6: -3}
+          body_6=${response_6%???}
 
-          # if [[ "$http_code_6" == "200" ]]; then
-          #   read_only_6=$(echo "$body_6" | grep -o '"read_only":[^,}]*' | cut -d':' -f2 | tr -d ' ')
-          #   if [[ "$read_only_6" == "false" ]]; then
-          #     echo "✅ IPv6 secure_ip working: read_only=false"
-          #   else
-          #     echo "❌ IPv6 secure_ip failed: read_only=$read_only_6"
-          #   fi
-          # else
-          #   echo "❌ IPv6 connection failed: HTTP $http_code_6"
-          # fi
+          if [[ "$http_code_6" == "200" ]]; then
+            read_only_6=$(echo "$body_6" | grep -o '"read_only":[^,}]*' | cut -d':' -f2 | tr -d ' ')
+            if [[ "$read_only_6" == "false" ]]; then
+              echo "✅ IPv6 secure_ip working: read_only=false"
+            else
+              echo "❌ IPv6 secure_ip failed: read_only=$read_only_6"
+            fi
+          else
+            echo "❌ IPv6 connection failed: HTTP $http_code_6"
+          fi
           echo "::endgroup::"
 
       - name: Run TestCafe tests in separate container
