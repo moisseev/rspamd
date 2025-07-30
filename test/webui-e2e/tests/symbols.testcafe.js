@@ -22,9 +22,8 @@
         await t.click(symbolsNav);
         await t.expect(symbolsTable.visible).ok();
 
-        // Check that there is at least one row (excluding header)
-        const rowCount = await tableRows.count;
-        await t.expect(rowCount).gt(0);
+        // Wait for symbols data to load (table should have at least one row)
+        await t.expect(tableRows.count).gt(0, "Symbols table should have at least one row");
 
         // Check group filtering if selector exists
         const selectCount = await groupSelect.count;

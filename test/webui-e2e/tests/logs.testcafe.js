@@ -57,12 +57,12 @@
         await t.click(updateErrors);
 
         // Step 4: Wait for table to update and check that new error appeared
-        await t.wait(2000); // Wait for table to update
-        const newRowCount = await tableRows.count;
-        await t.expect(newRowCount).gt(initialRowCount, "New error should appear in the log");
+        await t.wait(3000); // Wait for table to update
+        await t.expect(tableRows.count).gt(initialRowCount, "New error should appear in the log");
 
         // Step 5: Check content of the new error (should contain information about the failed request)
-        if (newRowCount > initialRowCount) {
+        const finalRowCount = await tableRows.count;
+        if (finalRowCount > initialRowCount) {
             // Get the first row (most recent error)
             const firstRow = tableRows.nth(0);
             const errorText = await firstRow.textContent;
