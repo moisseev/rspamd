@@ -34,6 +34,10 @@
         const tableRows = Selector("#errorsLog tbody tr");
         const updateErrors = Selector("#updateErrors");
 
+        // Wait for the History tab to be enabled (not disabled)
+        await t.expect(historyNav.hasAttribute("disabled")).notOk("History tab should be enabled");
+        await t.expect(historyNav.visible).ok("History tab should be visible");
+
         await t.click(historyNav);
 
         // Check errors table presence

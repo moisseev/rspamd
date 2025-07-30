@@ -15,6 +15,10 @@
         const saveButton = Selector("#save-alert button");
         const successAlert = Selector(".alert-success, .alert-modal.alert-success");
 
+        // Wait for the Symbols tab to be enabled (not disabled)
+        await t.expect(symbolsNav.hasAttribute("disabled")).notOk("Symbols tab should be enabled");
+        await t.expect(symbolsNav.visible).ok("Symbols tab should be visible");
+
         await t.click(symbolsNav);
         await t.expect(symbolsTable.visible).ok();
 

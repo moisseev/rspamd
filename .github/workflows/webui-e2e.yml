@@ -43,8 +43,7 @@ jobs:
           cp -a src/conf/. "${PREFIX}/etc/rspamd/"
           echo 'static_dir = "/__w/rspamd/rspamd/install/share/rspamd/www";' > ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
           echo 'bind_socket = "*:11334";' >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
-          echo 'secure_ip = "0.0.0.0/0";' >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
-          echo 'secure_ip = "::/0";' >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
+          echo 'secure_ip = [ "0.0.0.0/0", "::/0" ];' >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
           cat > ${PREFIX}/etc/rspamd/local.d/logging.inc << 'EOF'
           type = "console";
           level = "info";

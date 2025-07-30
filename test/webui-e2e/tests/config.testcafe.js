@@ -11,6 +11,10 @@
         const saveActionsBtn = Selector("#saveActionsBtn");
         const errorAlert = Selector(".alert-error, .alert-modal.alert-error");
 
+        // Wait for the Configuration tab to be enabled (not disabled)
+        await t.expect(configNav.hasAttribute("disabled")).notOk("Configuration tab should be enabled");
+        await t.expect(configNav.visible).ok("Configuration tab should be visible");
+
         await t.click(configNav);
         await t.expect(actionsFormField.visible).ok();
 
