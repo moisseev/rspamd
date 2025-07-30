@@ -242,6 +242,15 @@ jobs:
           docker run --rm \
             --network rspamd-test-network \
             -v ${{ github.workspace }}/src/test/webui-e2e:/tests \
+            -v ${{ github.workspace }}/screenshots:/tests/screenshots \
             -w /tests \
             testcafe/testcafe:latest \
-            firefox:headless tests/*.js --reporter spec
+            firefox:headless tests/*.js --reporter spec --screenshots screenshots --screenshots-on-fails
+
+      - name: Upload screenshots as artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testcafe-screenshots
+          path: screenshots/
+          retention-days: 7

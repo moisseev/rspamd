@@ -19,11 +19,19 @@
         await t.expect(symbolsNav.hasAttribute("disabled")).notOk("Symbols tab should be enabled");
         await t.expect(symbolsNav.visible).ok("Symbols tab should be visible");
 
+        // Debug: log current state
+        const isDisabled = await symbolsNav.hasAttribute("disabled");
+        const isVisible = await symbolsNav.visible;
+        console.log(`Symbols tab - disabled: ${isDisabled}, visible: ${isVisible}`);
+
         await t.click(symbolsNav);
         await t.expect(symbolsTable.visible).ok();
 
         // Wait for symbols data to load (table should have at least one row)
         await t.expect(tableRows.count).gt(0, "Symbols table should have at least one row");
+
+        // Take screenshot for debugging
+        await t.takeScreenshot("symbols-page-loaded.png");
 
         // Check group filtering if selector exists
         const selectCount = await groupSelect.count;
