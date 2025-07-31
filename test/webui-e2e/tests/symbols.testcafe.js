@@ -97,11 +97,35 @@
         const tableClasses = await symbolsTable.classNames;
         console.log(`Table classes: ${tableClasses}`);
 
-        // Wait for FooTable to be fully ready and create tbody
-        console.log("Waiting for FooTable to be fully ready...");
-        await t.expect(symbolsTable.find("tbody").exists).ok("FooTable should create tbody element", {timeout: 15000});
+        // Debug: Check table structure
+        console.log("Checking table structure...");
+        const tableStructureHTML = await symbolsTable.innerHTML;
+        console.log(`Table HTML structure: ${tableStructureHTML ? tableStructureHTML.substring(0, 1000) : "null"}`);
 
-        // Now wait for tbody to have rows
+        // Check if tbody exists in original HTML
+        const tbodyExists = await symbolsTable.find("tbody").exists;
+        console.log(`tbody exists in HTML: ${tbodyExists}`);
+
+        // Check all direct children of table
+        const tableChildren = await symbolsTable.childElementCount;
+        console.log(`Table has ${tableChildren} direct children`);
+
+        // List all direct children
+        for (let i = 0; i < tableChildren; i++) {
+            const child = symbolsTable.child(i);
+            const childTagName = child.tagName;
+            console.log(`Child ${i}: ${childTagName}`);
+        }
+
+        // Wait for FooTable to be fully ready and create complete table structure
+        console.log("Waiting for FooTable to be fully ready...");
+
+        // Wait for FooTable to create the complete table structure (thead, tbody, tfoot)
+        await t.expect(symbolsTable.find("thead").exists).ok("FooTable should create thead element", {timeout: 10000});
+        await t.expect(symbolsTable.find("tbody").exists).ok("FooTable should create tbody element", {timeout: 10000});
+
+
+        // Now wait for tbody to have rows with data
         console.log("Waiting for FooTable to populate tbody with rows...");
         await t.expect(symbolsTable.find("tbody tr").count).gt(0, 
             "FooTable should have created rows in tbody", {timeout: 20000});

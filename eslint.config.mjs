@@ -97,6 +97,7 @@ export default [
             sourceType: "script",
         },
         rules: {
+            "max-statements": ["warn", 120],
             "new-cap": "off", // TestCafe's Selector is not a constructor, so new-cap is not appropriate
             "no-console": "off",
         },
