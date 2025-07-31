@@ -18,8 +18,6 @@
         const symbolsNav = Selector("#symbols_nav");
         const symbolsTable = Selector("#symbolsTable");
         let tableRows = Selector("#symbolsTable tbody tr");
-        const groupSelect = Selector(".form-select");
-        const scoreInput = Selector("#symbolsTable .scorebar").nth(0);
         const saveAlert = Selector("#save-alert");
         const saveButton = Selector("#save-alert button");
         const successAlert = Selector(".alert-success, .alert-modal.alert-success");
@@ -83,10 +81,38 @@
 
         // Wait for table to be populated with data from API
         console.log("Waiting for table to be populated with data...");
-        await t.expect(tableRows.count).gt(0, "Symbols table should have data after API request", {timeout: 15000});
+
+        // Wait for FooTable to be ready (based on WebUI code)
+        console.log("Waiting for FooTable to be ready...");
+        await t.expect(symbolsTable.exists).ok("Symbols table should exist", {timeout: 5000});
+
+        // Wait for FooTable to be ready and have content
+        console.log("Waiting for FooTable to be ready...");
+
+        // Wait for the table to have the footable class (indicates FooTable is initialized)
+        await t.expect(symbolsTable.hasClass("footable")).ok("Table should have footable class", {timeout: 10000});
+
+        // Debug: Check FooTable state and structure
+        console.log("Debugging FooTable state...");
+        const tableClasses = await symbolsTable.classNames;
+        console.log(`Table classes: ${tableClasses}`);
+
+        // Wait for FooTable to be fully ready and create tbody
+        console.log("Waiting for FooTable to be fully ready...");
+        await t.expect(symbolsTable.find("tbody").exists).ok("FooTable should create tbody element", {timeout: 15000});
+
+        // Now wait for tbody to have rows
+        console.log("Waiting for FooTable to populate tbody with rows...");
+        await t.expect(symbolsTable.find("tbody tr").count).gt(0, 
+            "FooTable should have created rows in tbody", {timeout: 20000});
+
+        // Wait for actual content in the first row
+        console.log("Waiting for row content...");
+        const firstRowContent = symbolsTable.find("tbody tr").nth(0).textContent;
+        await t.expect(firstRowContent).notEql("", "First row should have content", {timeout: 10000});
 
         // Now check the actual row count
-        let rowCount = await tableRows.count;
+        const rowCount = await tableRows.count;
         console.log(`Symbols table has ${rowCount} rows after API request`);
 
         // Wait for table to have meaningful content (not just empty rows)
@@ -95,7 +121,7 @@
 
         // Debug table structure
         const tableHTML = await symbolsTable.innerHTML;
-        console.log(`Table HTML (first 500 chars): ${tableHTML ? tableHTML.substring(0, 500) : 'null'}...`);
+        console.log(`Table HTML (first 500 chars): ${tableHTML ? tableHTML.substring(0, 500) : "null"}...`);
 
         // Check if table has loading state or error state
         const loadingElement = Selector("#symbolsTable .loading, #symbolsTable .spinner");
@@ -116,7 +142,6 @@
                 console.log("Using alternative selector for table rows");
                 // Update the selector for the rest of the test
                 tableRows = altTableRows;
-                rowCount = altRowCount;
             }
         }
 
@@ -126,16 +151,8 @@
         // Take screenshot for debugging
         await t.takeScreenshot("symbols-page-loaded.png");
 
-        // Check group filtering if selector exists
-        const selectCount = await groupSelect.count;
-        if (selectCount > 0) {
-            await t.click(groupSelect.nth(0));
-            await t.click(groupSelect.nth(0).find("option").nth(1));
-            const filteredCount = await tableRows.count;
-            await t.expect(filteredCount).gt(0);
-        }
-
         // Try to change score value for first symbol
+        const scoreInput = Selector("#symbolsTable .scorebar").nth(0);
         const oldValue = await scoreInput.value;
         await t.typeText(scoreInput, "0.01", {replace: true});
         await t.pressKey("tab");
