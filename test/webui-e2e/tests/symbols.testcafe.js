@@ -1,9 +1,17 @@
 (function () {
     "use strict";
-    const {Selector} = require("testcafe");
+    const {Selector, RequestLogger} = require("testcafe");
+
+    // Create a request logger to track symbols API requests
+    const symbolsLogger = RequestLogger(/\/symbols/, {
+        logRequestHeaders: true,
+        logResponseHeaders: true,
+        logResponseBody: false
+    });
 
     fixture("Symbols page test")
-        .page("http://rspamd-container:11334");
+        .page("http://rspamd-container:11334")
+        .requestHooks(symbolsLogger);
 
     test("Symbols page shows list of symbols and allows editing", async (t) => {
         const symbolsNav = Selector("#symbols_nav");
@@ -26,6 +34,30 @@
 
         await t.click(symbolsNav);
         await t.expect(symbolsTable.visible).ok();
+
+        // Wait for symbols API request to complete
+        console.log("Waiting for symbols API request to complete...");
+        const symbolsRequestCompleted = symbolsLogger.contains((r) =>
+            r.request.url.includes("/symbols") && r.response.statusCode === 200
+        );
+        await t.expect(symbolsRequestCompleted).ok("Symbols API request should complete successfully", {timeout: 10000});
+
+        // Log the request details for debugging
+        const symbolsRequests = symbolsLogger.requests.filter((r) => r.request.url.includes("/symbols"));
+        console.log(`Found ${symbolsRequests.length} symbols API requests`);
+        if (symbolsRequests.length > 0) {
+            const lastRequest = symbolsRequests[symbolsRequests.length - 1];
+            const requestInfo = `${lastRequest.request.method} ${lastRequest.request.url} - ` +
+                `Status: ${lastRequest.response.statusCode}`;
+            console.log(`Last symbols request: ${requestInfo}`);
+        }
+
+        // Wait a bit more for the table to be populated with data
+        await t.wait(2000);
+
+        // Now check if table has data
+        const rowCount = await tableRows.count;
+        console.log(`Symbols table has ${rowCount} rows after API request`);
 
         // Wait for symbols data to load (table should have at least one row)
         await t.expect(tableRows.count).gt(0, "Symbols table should have at least one row");

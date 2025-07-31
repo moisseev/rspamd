@@ -245,6 +245,7 @@ jobs:
           chmod 777 screenshots diagnostics
 
           # Run TestCafe with enhanced logging, timeout and diagnostics
+          set +e  # Don't exit on error to capture exit code
           timeout 600 docker run --rm \
             --network rspamd-test-network \
             -v ${{ github.workspace }}/src/test/webui-e2e:/tests \
@@ -256,8 +257,13 @@ jobs:
             --reporter spec,json:diagnostics/test-results.json \
             --screenshots screenshots \
             --screenshots-on-fails \
-            --screenshots-on-error \
-            --debug-on-fail
+            --screenshots-on-error
+
+          testcafe_exit_code=$?
+          echo "TestCafe exit code: $testcafe_exit_code"
+
+          # Exit with TestCafe's exit code
+          exit $testcafe_exit_code
 
       - name: Collect diagnostics on failure
         if: failure()
@@ -272,13 +278,29 @@ jobs:
           # Save browser logs if available
           if [ -f diagnostics/test-results.json ]; then
             echo "::group::Test Results Summary"
-            cat diagnostics/test-results.json | jq '.fixtures[].tests[] | {name: .name, status: .errs[0]}' || echo "Failed to parse test results"
+            file_size=$(stat -c%s diagnostics/test-results.json 2>/dev/null || stat -f%z diagnostics/test-results.json 2>/dev/null || echo "unknown")
+            echo "JSON file size: $file_size bytes"
+            if [ "$file_size" -gt 0 ]; then
+              cat diagnostics/test-results.json | jq '.fixtures[].tests[] | {name: .name, status: .errs[0]}' || echo "Failed to parse test results"
+            else
+              echo "JSON file is empty - TestCafe may have failed to generate report"
+            fi
+            echo "::endgroup::"
+          else
+            echo "::group::Test Results Summary"
+            echo "test-results.json file not found - TestCafe may have failed to start or generate report"
             echo "::endgroup::"
           fi
 
           # Show container logs for debugging
           echo "::group::Rspamd Container Logs"
           docker logs rspamd-container --tail 50 || echo "Failed to get container logs"
+          echo "::endgroup::"
+
+          # Show network activity for debugging
+          echo "::group::Network Activity"
+          echo "Recent network connections to rspamd container:"
+          docker exec rspamd-container netstat -an | grep ":11334" | tail -10 || echo "No network connections found"
           echo "::endgroup::"
 
           # Show container status
