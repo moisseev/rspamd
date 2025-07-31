@@ -1,6 +1,23 @@
 {
-  "pageRequestTimeout": 3000,
-  "ajaxRequestTimeout": 3000,
-  "selectorTimeout": 1000,
-  "assertionTimeout": 1000
+  "pageRequestTimeout": 10000,
+  "ajaxRequestTimeout": 10000,
+  "selectorTimeout": 5000,
+  "assertionTimeout": 5000,
+  "browserInitTimeout": 30000,
+  "testExecutionTimeout": 60000,
+  "stopOnFirstFail": false,
+  "skipJsErrors": false,
+  "skipUncaughtErrors": false,
+  "developmentMode": false,
+  "disableMultipleWindows": true,
+  "disablePageCaching": true,
+  "disablePageReloads": false,
+  "speed": 1,
+  "screenshots": {
+    "path": "screenshots",
+    "takeOnFails": true,
+    "takeOnError": true,
+    "pathPattern": "${DATE}_${TIME}/${FULLNAME}.png"
+  },
+  "noColor": false
 }

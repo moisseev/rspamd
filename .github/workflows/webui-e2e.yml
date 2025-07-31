@@ -236,16 +236,55 @@ jobs:
           fi
           echo "::endgroup::"
 
-      - name: Run TestCafe tests in separate container
+      - name: Run TestCafe tests in separate container with timeout and diagnostics
         shell: bash -e {0}
+        timeout-minutes: 10
         run: |
-          docker run --rm \
+          # Create diagnostic directories with proper permissions
+          mkdir -p screenshots diagnostics
+          chmod 777 screenshots diagnostics
+
+          # Run TestCafe with enhanced logging, timeout and diagnostics
+          timeout 600 docker run --rm \
             --network rspamd-test-network \
             -v ${{ github.workspace }}/src/test/webui-e2e:/tests \
             -v ${{ github.workspace }}/screenshots:/tests/screenshots \
+            -v ${{ github.workspace }}/diagnostics:/tests/diagnostics \
             -w /tests \
             testcafe/testcafe:latest \
-            firefox:headless tests/*.js --reporter spec --screenshots screenshots --screenshots-on-fails
+            firefox:headless tests/*.js \
+            --reporter spec,json:diagnostics/test-results.json \
+            --screenshots screenshots \
+            --screenshots-on-fails \
+            --screenshots-on-error \
+            --debug-on-fail
+
+      - name: Collect diagnostics on failure
+        if: failure()
+        run: |
+          echo "::group::TestCafe Diagnostics"
+          echo "Screenshots directory:"
+          ls -la screenshots/ || echo "No screenshots found"
+          echo "Diagnostics directory:"
+          ls -la diagnostics/ || echo "No diagnostics found"
+          echo "::endgroup::"
+
+          # Save browser logs if available
+          if [ -f diagnostics/test-results.json ]; then
+            echo "::group::Test Results Summary"
+            cat diagnostics/test-results.json | jq '.fixtures[].tests[] | {name: .name, status: .errs[0]}' || echo "Failed to parse test results"
+            echo "::endgroup::"
+          fi
+
+          # Show container logs for debugging
+          echo "::group::Rspamd Container Logs"
+          docker logs rspamd-container --tail 50 || echo "Failed to get container logs"
+          echo "::endgroup::"
+
+          # Show container status
+          echo "::group::Container Status"
+          docker ps -a | grep rspamd-container || echo "Container not found"
+          echo "::endgroup::"
 
       - name: Upload screenshots as artifacts
         if: always()
@@ -253,4 +292,12 @@ jobs:
         with:
           name: testcafe-screenshots
           path: screenshots/
+          retention-days: 7
+
+      - name: Upload diagnostics as artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testcafe-diagnostics
+          path: diagnostics/
           retention-days: 7
