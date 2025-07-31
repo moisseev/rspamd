@@ -6,7 +6,8 @@
     const symbolsLogger = RequestLogger(/\/symbols/, {
         logRequestHeaders: true,
         logResponseHeaders: true,
-        logResponseBody: false
+        logResponseBody: true,
+        stringifyResponseBody: true
     });
 
     fixture("Symbols page test")
@@ -16,7 +17,7 @@
     test("Symbols page shows list of symbols and allows editing", async (t) => {
         const symbolsNav = Selector("#symbols_nav");
         const symbolsTable = Selector("#symbolsTable");
-        const tableRows = Selector("#symbolsTable tbody tr");
+        let tableRows = Selector("#symbolsTable tbody tr");
         const groupSelect = Selector(".form-select");
         const scoreInput = Selector("#symbolsTable .scorebar").nth(0);
         const saveAlert = Selector("#save-alert");
@@ -42,22 +43,82 @@
         );
         await t.expect(symbolsRequestCompleted).ok("Symbols API request should complete successfully", {timeout: 10000});
 
-        // Log the request details for debugging
-        const symbolsRequests = symbolsLogger.requests.filter((r) => r.request.url.includes("/symbols"));
-        console.log(`Found ${symbolsRequests.length} symbols API requests`);
-        if (symbolsRequests.length > 0) {
-            const lastRequest = symbolsRequests[symbolsRequests.length - 1];
-            const requestInfo = `${lastRequest.request.method} ${lastRequest.request.url} - ` +
-                `Status: ${lastRequest.response.statusCode}`;
-            console.log(`Last symbols request: ${requestInfo}`);
+        // Use direct API call to get properly formatted response
+        console.log("Making direct API call to get symbols data...");
+        try {
+            const symbolsResponse = await t.request("http://rspamd-container:11334/symbols");
+            console.log(`Direct API response status: ${symbolsResponse.status}`);
+            console.log(`Direct API response body type: ${typeof symbolsResponse.body}`);
+
+            if (symbolsResponse.body && symbolsResponse.body.symbols) {
+                console.log(`Direct API symbols count: ${symbolsResponse.body.symbols.length}`);
+                if (symbolsResponse.body.symbols.length > 0) {
+                    console.log(`Direct API first symbol: ${JSON.stringify(symbolsResponse.body.symbols[0])}`);
+                }
+            } else {
+                console.log("Direct API response body structure:", Object.keys(symbolsResponse.body || {}));
+                // Log first few items to understand the structure
+                if (symbolsResponse.body && Array.isArray(symbolsResponse.body)) {
+                    console.log(`Direct API array length: ${symbolsResponse.body.length}`);
+                    if (symbolsResponse.body.length > 0) {
+                        console.log(`Direct API first item: ${JSON.stringify(symbolsResponse.body[0])}`);
+                    }
+                }
+            }
+        } catch (e) {
+            console.log(`Direct API call failed: ${e.message}`);
         }
 
-        // Wait a bit more for the table to be populated with data
-        await t.wait(2000);
+        // Also log RequestLogger data for comparison
+        const symbolsRequests = symbolsLogger.requests.filter((r) => r.request.url.includes("/symbols"));
+        console.log(`Found ${symbolsRequests.length} symbols API requests via RequestLogger`);
+        if (symbolsRequests.length > 0) {
+            const lastRequest = symbolsRequests[symbolsRequests.length - 1];
+            console.log(`RequestLogger - Status: ${lastRequest.response.statusCode}`);
 
-        // Now check if table has data
-        const rowCount = await tableRows.count;
+            const contentEncoding = lastRequest.response.headers["content-encoding"];
+            const contentType = lastRequest.response.headers["content-type"];
+            console.log(`RequestLogger - Headers: Content-Encoding: ${contentEncoding}, Content-Type: ${contentType}`);
+        }
+
+        // Wait for table to be populated with data from API
+        console.log("Waiting for table to be populated with data...");
+        await t.expect(tableRows.count).gt(0, "Symbols table should have data after API request", {timeout: 15000});
+
+        // Now check the actual row count
+        let rowCount = await tableRows.count;
         console.log(`Symbols table has ${rowCount} rows after API request`);
+
+        // Wait for table to have meaningful content (not just empty rows)
+        console.log("Waiting for table to have meaningful content...");
+        await t.expect(tableRows.nth(0).textContent).notEql("", "First table row should have content", {timeout: 5000});
+
+        // Debug table structure
+        const tableHTML = await symbolsTable.innerHTML;
+        console.log(`Table HTML (first 500 chars): ${tableHTML ? tableHTML.substring(0, 500) : 'null'}...`);
+
+        // Check if table has loading state or error state
+        const loadingElement = Selector("#symbolsTable .loading, #symbolsTable .spinner");
+        const errorElement = Selector("#symbolsTable .error, #symbolsTable .alert-error");
+
+        const hasLoading = await loadingElement.exists;
+        const hasError = await errorElement.exists;
+        console.log(`Table has loading state: ${hasLoading}, has error state: ${hasError}`);
+
+        // Try alternative selectors if main selector doesn't work
+        if (rowCount === 0) {
+            console.log("Trying alternative table selectors...");
+            const altTableRows = Selector("#symbolsTable tr, .symbols-table tr, table tr");
+            const altRowCount = await altTableRows.count;
+            console.log(`Alternative selector found ${altRowCount} rows`);
+
+            if (altRowCount > 0) {
+                console.log("Using alternative selector for table rows");
+                // Update the selector for the rest of the test
+                tableRows = altTableRows;
+                rowCount = altRowCount;
+            }
+        }
 
         // Wait for symbols data to load (table should have at least one row)
         await t.expect(tableRows.count).gt(0, "Symbols table should have at least one row");
