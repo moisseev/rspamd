@@ -113,7 +113,7 @@
         // List all direct children
         for (let i = 0; i < tableChildren; i++) {
             const child = symbolsTable.child(i);
-            const childTagName = child.tagName;
+            const childTagName = await child.tagName;
             console.log(`Child ${i}: ${childTagName}`);
         }
 
