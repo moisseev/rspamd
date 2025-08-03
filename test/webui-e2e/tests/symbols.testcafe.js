@@ -184,8 +184,43 @@
 
         // Wait for tbody to exist and have content
         console.log("Waiting for tbody to exist and have content...");
-        await t.expect(symbolsTable.find("tbody").exists).ok("Table should have tbody", {timeout: 10000});
-        await t.expect(symbolsTable.find("tbody tr").count).gt(0, "Table should have rows in tbody", {timeout: 10000});
+
+        // Use client function to wait for tbody creation
+        await t.eval(() => new Promise((resolve) => {
+            const table = document.getElementById("symbolsTable");
+            if (table) {
+                // Check if tbody already exists
+                if (table.querySelector("tbody tr")) {
+                    console.log("tbody already exists with data");
+                    resolve(true);
+                    return;
+                }
+
+                // Wait for tbody creation
+                function checkTbody() {
+                    if (table.querySelector("tbody tr")) {
+                        console.log("tbody created with data");
+                        resolve(true);
+                    } else {
+                        setTimeout(checkTbody, 100);
+                    }
+                }
+
+                // Start checking
+                setTimeout(checkTbody, 100);
+
+                // Fallback timeout
+                setTimeout(() => {
+                    console.log("tbody creation timeout");
+                    resolve(false);
+                }, 10000);
+            } else {
+                resolve(false);
+            }
+        }), {timeout: 15000});
+
+        await t.expect(symbolsTable.find("tbody").exists).ok("Table should have tbody");
+        await t.expect(symbolsTable.find("tbody tr").count).gt(0, "Table should have rows in tbody");
 
         // Wait for actual content in the first row
         console.log("Waiting for row content...");
