@@ -120,12 +120,13 @@
         // Wait for FooTable to be fully ready using the ready.ft.table event
         console.log("Waiting for FooTable ready.ft.table event...");
 
-        // Use client function to wait for FooTable ready event
+        // Use client function to wait for FooTable ready event and tbody creation
         await t.eval(() => new Promise((resolve) => {
             const table = document.getElementById("symbolsTable");
             if (table) {
-                // Check if FooTable is already ready
+                // Check if FooTable is already ready with tbody and data
                 if (table.classList.contains("footable") && table.querySelector("tbody tr")) {
+                    console.log("FooTable already ready with tbody and data");
                     resolve(true);
                     return;
                 }
@@ -134,15 +135,26 @@
                 // eslint-disable-next-line no-undef
                 $(table).one("ready.ft.table", () => {
                     console.log("FooTable ready.ft.table event fired");
-                    resolve(true);
+                    // Wait a bit more for tbody to be populated
+                    setTimeout(() => {
+                        if (table.querySelector("tbody tr")) {
+                            console.log("FooTable tbody populated after ready event");
+                            resolve(true);
+                        } else {
+                            console.log("FooTable ready but no tbody data yet");
+                            resolve(false);
+                        }
+                    }, 2000);
                 });
 
-                // Fallback timeout
+                // Fallback timeout - check for tbody creation
                 setTimeout(() => {
-                    console.log("FooTable ready timeout - checking if table has data");
+                    console.log("FooTable ready timeout - checking if table has tbody with data");
                     if (table.querySelector("tbody tr")) {
+                        console.log("FooTable tbody found with data after timeout");
                         resolve(true);
                     } else {
+                        console.log("FooTable timeout - no tbody with data found");
                         resolve(false);
                     }
                 }, 15000);
@@ -169,6 +181,11 @@
         // Check all tr elements in the table
         const allTrCount = await symbolsTable.find("tr").count;
         console.log(`Total tr elements after ready: ${allTrCount}`);
+
+        // Wait for tbody to exist and have content
+        console.log("Waiting for tbody to exist and have content...");
+        await t.expect(symbolsTable.find("tbody").exists).ok("Table should have tbody", {timeout: 10000});
+        await t.expect(symbolsTable.find("tbody tr").count).gt(0, "Table should have rows in tbody", {timeout: 10000});
 
         // Wait for actual content in the first row
         console.log("Waiting for row content...");
