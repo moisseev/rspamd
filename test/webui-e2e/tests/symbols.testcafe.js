@@ -1,68 +1,148 @@
-/* global jQuery */
+"use strict";
 
-const {Selector, ClientFunction} = require("testcafe");
+const {ClientFunction} = require("testcafe");
 
-fixture("Symbols page").page("http://rspamd-container:11334");
-
-test("Symbols page shows list and allows editing", async (t) => {
-    "use strict";
-
-    const nav = Selector("#symbols_nav");
-    const table = Selector("#symbolsTable");
-    const saveBtn = Selector("#save-alert button");
-    const success = Selector(".alert-success, .alert-modal.alert-success");
-    const waitForFooTable = ClientFunction(() => new Promise((resolve) => {
+function testSymbolsPage() {
+    return new Promise((resolve, reject) => {
         const start = Date.now();
 
-        (function check() {
-            const tbl = document.getElementById("symbolsTable");
-            if (!window.jQuery || !tbl) {
-                resolve();
+        function waitForTable() {
+            const table = document.getElementById("symbolsTable");
+            if (!table) {
+                if (Date.now() - start > 10000) {
+                    reject(new Error("Table not found"));
+                    return;
+                }
+                setTimeout(waitForTable, 100);
                 return;
             }
-            const ftData = jQuery(tbl).data("__FooTable__");
-            if (ftData && ftData.initialized) {
-                resolve();
+
+            // visible rows in tbody (offsetParent !== null means visible)
+            const rows = Array.from(table.querySelectorAll("tbody tr")).filter(
+                row => row.offsetParent !== null
+            );
+
+            if (rows.length === 0) {
+                if (Date.now() - start > 10000) {
+                    reject(new Error("No visible rows"));
+                    return;
+                }
+                setTimeout(waitForTable, 100);
                 return;
             }
-            if (Date.now() - start > 5000) {
-                resolve();
+
+            proceed(table, rows);
+        }
+
+        function waitForSaveButtonVisibleAndEnabled() {
+            return new Promise((resolve, reject) => {
+                const start = Date.now();
+
+                function check() {
+                    const btn = document.querySelector("#save-alert button:not([data-save])");
+                    if (
+                        btn &&
+                        btn.offsetParent !== null && // visible
+                        !btn.disabled
+                    ) {
+                        resolve();
+                        return;
+                    }
+                    if (Date.now() - start > 5000) {
+                        reject(new Error("Save button not visible or disabled"));
+                        return;
+                    }
+                    setTimeout(check, 100);
+                }
+
+                check();
+            });
+        }
+
+        function waitSuccessAlert() {
+            return new Promise((resolve, reject) => {
+                const start = Date.now();
+
+                function check() {
+                    const alert = document.querySelector(".alert-success, .alert-modal.alert-success");
+                    if (alert && alert.offsetParent !== null) {
+                        resolve();
+                        return;
+                    }
+                    if (Date.now() - start > 5000) {
+                        reject(new Error("Success alert did not appear"));
+                        return;
+                    }
+                    setTimeout(check, 100);
+                }
+
+                check();
+            });
+        }
+
+        function proceed(table, rows) {
+            if (rows.length === 0) {
+                reject(new Error("No visible rows in symbols table"));
                 return;
             }
-            setTimeout(check, 100);
-        }());
-    }));
 
-    await t
-        .expect(nav.hasAttribute("disabled")).notOk("Symbols tab should be enabled")
-        .click(nav)
-        .expect(table.visible).ok("Symbols table must be visible");
+            const firstRow = rows[0];
+            const firstCell = firstRow.querySelector("td");
+            if (!firstCell || !firstCell.textContent.trim()) {
+                reject(new Error("First cell is empty"));
+                return;
+            }
 
-    await waitForFooTable();
+            const scoreInput = table.querySelector(".scorebar");
+            const saveBtn = document.querySelector("#save-alert button:not([data-save])");
 
-    const rows = table.find("tr").filterVisible();
+            if (!scoreInput) {
+                reject(new Error("Score input not found"));
+                return;
+            }
+            if (!saveBtn) {
+                reject(new Error("Save button not found"));
+                return;
+            }
 
-    await t.expect(rows.count).gt(0, "FooTable should have at least one visible row");
+            const oldValue = scoreInput.value;
 
-    const firstRow = rows.nth(0);
-    const firstCell = firstRow.find("td").nth(0);
+            // Изменяем значение и вызываем события вручную
+            scoreInput.value = Number(oldValue) + 1;
+            scoreInput.dispatchEvent(new Event("input", { bubbles: true }));
+            scoreInput.dispatchEvent(new Event("change", { bubbles: true }));
+            scoreInput.blur();
 
-    await t.expect(firstCell.textContent).notEql("", "First cell must contain text");
+            waitForSaveButtonVisibleAndEnabled()
+                .then(() => {
+                    saveBtn.click();
+                    return waitSuccessAlert();
+                })
+                .then(() => {
+                    scoreInput.value = oldValue;
+                    scoreInput.dispatchEvent(new Event("input", { bubbles: true }));
+                    scoreInput.dispatchEvent(new Event("change", { bubbles: true }));
+                    scoreInput.blur();
 
-    const scoreInput = table.find(".scorebar").nth(0);
-    const oldValue = await scoreInput.value;
+                    return waitForSaveButtonVisibleAndEnabled();
+                })
+                .then(() => {
+                    saveBtn.click();
+                    return waitSuccessAlert();
+                })
+                .then(() => resolve("Test passed"))
+                .catch(reject);
+        }
 
-    await t
-        .selectText(scoreInput).pressKey("delete")
-        .typeText(scoreInput, "0.01")
-        .click(saveBtn)
-        .expect(success.visible)
-        .ok("Save should show success alert");
+        waitForTable();
+    });
+}
 
-    await t
-        .selectText(scoreInput).pressKey("delete")
-        .typeText(scoreInput, oldValue)
-        .click(saveBtn)
-        .expect(success.visible)
-        .ok("Restore should also succeed");
+const runTest = ClientFunction(testSymbolsPage);
+
+fixture("Symbols page test").page("http://rspamd-container:11334/#symbols");
+
+test("Symbols test", async (t) => {
+    const result = await runTest();
+    await t.expect(result).eql("Test passed");
 });
