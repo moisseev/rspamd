@@ -17,7 +17,9 @@
     test("Symbols page shows list of symbols and allows editing", async (t) => {
         const symbolsNav = Selector("#symbols_nav");
         const symbolsTable = Selector("#symbolsTable");
-        let tableRows = Selector("#symbolsTable tbody tr");
+        // Include *any* <tr> inside the table, except those in the THEAD or TFOOT.
+        let tableRows = Selector("#symbolsTable tr:not(thead tr):not(tfoot tr)").filterVisible();
+
         const saveAlert = Selector("#save-alert");
         const saveButton = Selector("#save-alert button");
         const successAlert = Selector(".alert-success, .alert-modal.alert-success");
@@ -167,16 +169,7 @@
 
         // Debug: Check what FooTable actually created after ready event
         console.log("Debugging FooTable after ready event...");
-        const tbodyExistsAfterReady = await symbolsTable.find("tbody").exists;
-        console.log(`tbody exists after ready: ${tbodyExistsAfterReady}`);
-
-        if (tbodyExistsAfterReady) {
-            const tbodyRowCount = await symbolsTable.find("tbody tr").count;
-            console.log(`tbody row count after ready: ${tbodyRowCount}`);
-
-            const tbodyHTML = await symbolsTable.find("tbody").innerHTML;
-            console.log(`tbody HTML after ready: ${tbodyHTML ? tbodyHTML.substring(0, 500) : "null"}`);
-        }
+        await t.expect(tableRows.count).gt(0, "Symbols table should have at least one data row");
 
         // Check all tr elements in the table
         const allTrCount = await symbolsTable.find("tr").count;
@@ -185,47 +178,9 @@
         // Wait for tbody to exist and have content
         console.log("Waiting for tbody to exist and have content...");
 
-        // Use client function to wait for tbody creation
-        await t.eval(() => new Promise((resolve) => {
-            const table = document.getElementById("symbolsTable");
-            if (table) {
-                // Check if tbody already exists
-                if (table.querySelector("tbody tr")) {
-                    console.log("tbody already exists with data");
-                    resolve(true);
-                    return;
-                }
-
-                // Wait for tbody creation
-                function checkTbody() {
-                    if (table.querySelector("tbody tr")) {
-                        console.log("tbody created with data");
-                        resolve(true);
-                    } else {
-                        setTimeout(checkTbody, 100);
-                    }
-                }
-
-                // Start checking
-                setTimeout(checkTbody, 100);
-
-                // Fallback timeout
-                setTimeout(() => {
-                    console.log("tbody creation timeout");
-                    resolve(false);
-                }, 10000);
-            } else {
-                resolve(false);
-            }
-        }), {timeout: 15000});
-
-        await t.expect(symbolsTable.find("tbody").exists).ok("Table should have tbody");
-        await t.expect(symbolsTable.find("tbody tr").count).gt(0, "Table should have rows in tbody");
-
         // Wait for actual content in the first row
-        console.log("Waiting for row content...");
-        const firstRowContent = symbolsTable.find("tbody tr").nth(0).textContent;
-        await t.expect(firstRowContent).notEql("", "First row should have content", {timeout: 10000});
+        const firstRowContent = tableRows.nth(0).textContent;
+        await t.expect(firstRowContent).notEql("", "First table row should have content");
 
         // Now check the actual row count
         const rowCount = await tableRows.count;
