@@ -1,7 +1,6 @@
 const {Selector} = require("testcafe");
 
-fixture("WebUI smoke test")
-    .page("http://rspamd-container:11334");
+fixture("WebUI smoke test").page("/");
 
 test("should load WebUI and show main elements", async (t) => {
     const preloader = Selector("#preloader");

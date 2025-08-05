@@ -1,7 +1,6 @@
 const {Selector} = require("testcafe");
 
-fixture("Main page test")
-    .page("http://rspamd-container:11334");
+fixture("Main page test").page("/");
 
 test("Main page is accessible and shows dashboard", async (t) => {
     const navBar = Selector("#navBar");

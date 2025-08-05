@@ -1,8 +1,7 @@
-fixture("API test")
-    .page("http://rspamd-container:11334");
+fixture("API test").page("/");
 
 test("API /stat endpoint is available and returns version", async (t) => {
-    const response = await t.request("http://rspamd-container:11334/stat");
+    const response = await t.request("/stat");
     if (response.status !== 200) {
         throw new Error(`Unexpected status: ${response.status}, body: ${JSON.stringify(response.body)}`);
     }

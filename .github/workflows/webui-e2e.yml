@@ -248,6 +248,7 @@ jobs:
           set +e  # Don't exit on error to capture exit code
           timeout 600 docker run --rm \
             --network rspamd-test-network \
+            -e BASE_URL=http://rspamd-container:11334 \
             -v ${{ github.workspace }}/src/test/webui-e2e:/tests \
             -v ${{ github.workspace }}/screenshots:/tests/screenshots \
             -w /tests \

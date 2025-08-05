@@ -1,7 +1,6 @@
 const {Selector} = require("testcafe");
 
-fixture("Error handling test")
-    .page("http://rspamd-container:11334");
+fixture("Error handling test").page("/");
 
 test("Shows error alert if backend is unavailable", async (t) => {
     const errorAlert = Selector(".alert-error, .alert-modal.alert-error");

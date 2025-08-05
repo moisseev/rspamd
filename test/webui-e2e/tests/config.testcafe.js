@@ -1,7 +1,6 @@
 const {Selector} = require("testcafe");
 
-fixture("Config page test")
-    .page("http://rspamd-container:11334");
+fixture("Config page test").page("/");
 
 test("Config page: always checks order error and valid save for actions", async (t) => {
     const configNav = Selector("#configuration_nav");
