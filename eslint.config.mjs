@@ -94,10 +94,9 @@ export default [
                 require: "readonly", // TestCafe tests run in Node.js, require is valid
                 test: "readonly", // TestCafe global
             },
-            sourceType: "script",
+            sourceType: "module",
         },
         rules: {
-            "max-statements": ["warn", 120],
             "new-cap": "off", // TestCafe's Selector is not a constructor, so new-cap is not appropriate
             "no-await-in-loop": "off", // TestCafe operations in loops are often sequential and not independent
             "no-console": "off",
