@@ -241,8 +241,8 @@ jobs:
         timeout-minutes: 10
         run: |
           # Create diagnostic directories with proper permissions
-          mkdir -p screenshots diagnostics
-          chmod 777 screenshots diagnostics
+          mkdir -p screenshots
+          chmod 777 screenshots
 
           # Run TestCafe with enhanced logging, timeout and diagnostics
           set +e  # Don't exit on error to capture exit code
@@ -250,14 +250,9 @@ jobs:
             --network rspamd-test-network \
             -v ${{ github.workspace }}/src/test/webui-e2e:/tests \
             -v ${{ github.workspace }}/screenshots:/tests/screenshots \
-            -v ${{ github.workspace }}/diagnostics:/tests/diagnostics \
             -w /tests \
             testcafe/testcafe:latest \
-            firefox:headless tests/*.js \
-            --reporter spec,json:diagnostics/test-results.json \
-            --screenshots screenshots \
-            --screenshots-on-fails \
-            --screenshots-on-error
+            firefox:headless tests/*.js
 
           testcafe_exit_code=$?
           echo "TestCafe exit code: $testcafe_exit_code"
@@ -271,26 +266,7 @@ jobs:
           echo "::group::TestCafe Diagnostics"
           echo "Screenshots directory:"
           ls -la screenshots/ || echo "No screenshots found"
-          echo "Diagnostics directory:"
-          ls -la diagnostics/ || echo "No diagnostics found"
           echo "::endgroup::"
-
-          # Save browser logs if available
-          if [ -f diagnostics/test-results.json ]; then
-            echo "::group::Test Results Summary"
-            file_size=$(stat -c%s diagnostics/test-results.json 2>/dev/null || stat -f%z diagnostics/test-results.json 2>/dev/null || echo "unknown")
-            echo "JSON file size: $file_size bytes"
-            if [ "$file_size" -gt 0 ]; then
-              cat diagnostics/test-results.json | jq '.fixtures[].tests[] | {name: .name, status: .errs[0]}' || echo "Failed to parse test results"
-            else
-              echo "JSON file is empty - TestCafe may have failed to generate report"
-            fi
-            echo "::endgroup::"
-          else
-            echo "::group::Test Results Summary"
-            echo "test-results.json file not found - TestCafe may have failed to start or generate report"
-            echo "::endgroup::"
-          fi
 
           # Show container logs for debugging
           echo "::group::Rspamd Container Logs"
@@ -314,12 +290,4 @@ jobs:
         with:
           name: testcafe-screenshots
           path: screenshots/
-          retention-days: 7
-
-      - name: Upload diagnostics as artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: testcafe-diagnostics
-          path: diagnostics/
           retention-days: 7
