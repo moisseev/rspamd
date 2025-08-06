@@ -247,7 +247,7 @@ jobs:
           # Run TestCafe with enhanced logging, timeout and diagnostics
           set +e  # Don't exit on error to capture exit code
           timeout 600 docker run --rm \
-            --network rspamd-test-network \
+            --network host \
             -v ${{ github.workspace }}/src/test/webui-e2e:/tests \
             -v ${{ github.workspace }}/screenshots:/tests/screenshots \
             -w /tests \

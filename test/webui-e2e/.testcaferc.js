@@ -1,6 +1,6 @@
 /* global module */
 module.exports = {
-    baseUrl: "http://rspamd-container:11334",
+    baseUrl: "http://127.0.0.1:11334",
     disablePageCaching: true,
     screenshots: {
         path: "screenshots",
