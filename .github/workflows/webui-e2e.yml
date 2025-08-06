@@ -248,7 +248,6 @@ jobs:
           set +e  # Don't exit on error to capture exit code
           timeout 600 docker run --rm \
             --network host \
-            -e URL=http://127.0.0.1:11334 \
             -v ${{ github.workspace }}/src/test/webui-e2e:/tests \
             -v ${{ github.workspace }}/screenshots:/tests/screenshots \
             -w /tests \

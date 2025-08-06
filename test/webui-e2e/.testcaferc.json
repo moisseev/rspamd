@@ -1,0 +1,12 @@
+{
+    "baseUrl": "http://127.0.0.1:11334",
+    "screenshots": {
+        "path": "screenshots",
+        "takeOnFails": true,
+        "takeOnError": true,
+        "thumbnails": false,
+        "pathPattern": "${DATE}_${TIME}/${FULLNAME}.png",
+        "pathPatternOnFails": "${DATE}_${TIME}/failedTests/${FULLNAME}.png",
+        "takeOnSuccess": true
+    }
+}

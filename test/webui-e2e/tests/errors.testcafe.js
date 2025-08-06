@@ -1,7 +1,6 @@
-/* global process */
 const {Selector} = require("testcafe");
 
-fixture("Error handling test").page(process.env.URL);
+fixture("Error handling test");
 
 test("Shows error alert if backend is unavailable", async (t) => {
     const errorAlert = Selector(".alert-error, .alert-modal.alert-error");

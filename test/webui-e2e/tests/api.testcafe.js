@@ -1,4 +1,3 @@
-/* global process */
 fixture("API test");
 
 // eslint-disable-next-line require-await
@@ -7,7 +6,7 @@ test("Debug baseUrl configuration", async (t) => {
 });
 
 test("API /stat endpoint is available and returns version", async (t) => {
-    const response = await t.request(`${process.env.URL}/stat`);
+    const response = await t.request("/stat");
     if (response.status !== 200) {
         throw new Error(`Unexpected status: ${response.status}, body: ${JSON.stringify(response.body)}`);
     }

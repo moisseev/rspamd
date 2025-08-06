@@ -1,7 +1,6 @@
-/* global process */
 const {Selector} = require("testcafe");
 
-fixture("WebUI smoke test").page(process.env.URL);
+fixture("WebUI smoke test");
 
 test("should load WebUI and show main elements", async (t) => {
     const preloader = Selector("#preloader");

@@ -1,7 +1,6 @@
-/* global process */
 const {Selector} = require("testcafe");
 
-fixture("Config page test").page(process.env.URL);
+fixture("Config page test");
 
 test("Config page: always checks order error and valid save for actions", async (t) => {
     const configNav = Selector("#configuration_nav");
