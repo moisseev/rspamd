@@ -1,6 +1,6 @@
-/* global module process */
+/* global module */
 module.exports = {
-    baseUrl: process.env.BASE_URL || "http://localhost:11334",
+    baseUrl: "http://rspamd-container:11334",
     disablePageCaching: true,
     screenshots: {
         path: "screenshots",
