@@ -14,10 +14,10 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15  # Общий timeout для всего job - 15 минут
-    services:
-      docker:
-        image: docker:dind
-        options: --privileged --shm-size=2g
+    # services:
+    #   docker:
+    #     image: docker:dind
+    #     options: --privileged --shm-size=2g
     strategy:
       matrix:
         browser: [ firefox ]
@@ -75,7 +75,6 @@ jobs:
           docker run -d \
             --name rspamd-container \
             --network rspamd-test-network \
-            -p 11334:11334 \
             -v "${PREFIX}":/__w/rspamd/rspamd/install \
             -v /var/run/rspamd:/var/run/rspamd \
             -v /var/lib/rspamd:/var/lib/rspamd \
@@ -94,8 +93,8 @@ jobs:
           max_retries=60
           for i in $(seq 1 "$max_retries"); do
             # Use curl with write-out to get HTTP status code directly
-            http_code=$(docker run --rm --network host curlimages/curl:latest \
-              -s -S --max-time 5 -w '%{http_code}' -o /dev/null http://localhost:11334/ping 2>/dev/null || true)
+            http_code=$(docker run --rm --network rspamd-test-network curlimages/curl:latest \
+              -s -S --max-time 5 -w '%{http_code}' -o /dev/null http://rspamd-container:11334/ping 2>/dev/null || true)
 
             # If curl failed or returned empty, set to "000"
             if [[ -z "$http_code" ]]; then http_code="000"; fi
@@ -168,7 +167,8 @@ jobs:
       - name: Verify WebUI static assets
         run: |
           for asset in index.html css/rspamd.css js/main.js img/rspamd_logo_navbar.png; do
-            curl -4 -fsSo /dev/null http://localhost:11334/$asset || (echo "Missing $asset" && exit 1)
+            docker run --rm --network rspamd-test-network curlimages/curl:latest \
+              -4 -fsSo /dev/null http://rspamd-container:11334/$asset || (echo "Missing $asset" && exit 1)
           done
 
       - name: Debug network connectivity and authentication mode
@@ -177,11 +177,6 @@ jobs:
           docker run --rm --network rspamd-test-network curlimages/curl:latest \
             -s -S --max-time 5 -w 'HTTP: %{http_code}, Time: %{time_total}s\n' \
             http://rspamd-container:11334/ping || echo "Failed to connect"
-
-          echo "Testing connectivity to localhost:"
-          docker run --rm --network host curlimages/curl:latest \
-            -s -S --max-time 5 -w 'HTTP: %{http_code}, Time: %{time_total}s\n' \
-            http://localhost:11334/ping || echo "Failed to connect"
 
           echo "::group::IPv6 diagnostics"
           echo "Docker network info:"
@@ -194,10 +189,6 @@ jobs:
           docker run --rm --network rspamd-test-network curlimages/curl:latest \
             -6 -s -S --max-time 5 --resolve rspamd-container:11334:127.0.0.1 \
             http://rspamd-container:11334/ping || echo "DNS resolution failed"
-
-          echo "Direct IPv6 localhost test:"
-          docker run --rm --network rspamd-test-network curlimages/curl:latest \
-            -6 -s -S --max-time 5 http://[::1]:11334/ping || echo "IPv6 localhost failed"
           echo "::endgroup::"
 
           echo "::group::Authentication mode check"
@@ -247,7 +238,7 @@ jobs:
           # Run TestCafe with enhanced logging, timeout and diagnostics
           set +e  # Don't exit on error to capture exit code
           timeout 600 docker run --rm \
-            --network host \
+            --network rspamd-test-network \
             -v ${{ github.workspace }}/src/test/webui-e2e:/tests \
             -v ${{ github.workspace }}/screenshots:/tests/screenshots \
             -w /tests \

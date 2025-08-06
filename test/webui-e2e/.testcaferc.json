@@ -1,5 +1,5 @@
 {
-    "baseUrl": "http://127.0.0.1:11334",
+    "baseUrl": "http://rspamd-container:11334",
     "screenshots": {
         "path": "screenshots",
         "takeOnFails": true,
