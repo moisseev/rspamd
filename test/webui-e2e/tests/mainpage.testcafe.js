@@ -1,6 +1,7 @@
+/* global process */
 const {Selector} = require("testcafe");
 
-fixture("Main page test").page("/");
+fixture("Main page test").page(process.env.URL);
 
 test("Main page is accessible and shows dashboard", async (t) => {
     const navBar = Selector("#navBar");

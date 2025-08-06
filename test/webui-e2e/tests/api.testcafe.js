@@ -1,28 +1,4 @@
 /* global process */
-console.log("Environment variables:", {
-    BASE_URL: process.env.BASE_URL || "not set"
-});
-
-try {
-    try {
-        const config = require("testcafe/lib/configuration");
-        console.log("baseUrl from testcafe/lib/configuration:",
-            config && config.default && config.default.getOption("baseUrl"));
-    } catch (e) {
-        console.log("Could not access testcafe/lib/configuration");
-    }
-
-    try {
-        const config = require("testcafe/lib/configuration/config");
-        console.log("baseUrl from testcafe/lib/configuration/config:",
-            config && config.default && config.default.baseUrl);
-    } catch (e) {
-        console.log("Could not access testcafe/lib/configuration/config");
-    }
-} catch (error) {
-    console.log("Error accessing TestCafe configuration:", error.message);
-}
-
 fixture("API test");
 
 // eslint-disable-next-line require-await
@@ -31,7 +7,7 @@ test("Debug baseUrl configuration", async (t) => {
 });
 
 test("API /stat endpoint is available and returns version", async (t) => {
-    const response = await t.request("/stat");
+    const response = await t.request(`${process.env.URL}/stat`);
     if (response.status !== 200) {
         throw new Error(`Unexpected status: ${response.status}, body: ${JSON.stringify(response.body)}`);
     }

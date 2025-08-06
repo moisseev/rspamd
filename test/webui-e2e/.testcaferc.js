@@ -1,7 +1,5 @@
 /* global module */
 module.exports = {
-    baseUrl: "http://127.0.0.1:11334",
-    disablePageCaching: true,
     screenshots: {
         path: "screenshots",
         takeOnFails: true,
