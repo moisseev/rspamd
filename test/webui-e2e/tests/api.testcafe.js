@@ -4,20 +4,31 @@ console.log("Environment variables:", {
 });
 
 try {
-    const testCafePath = require.resolve("testcafe");
-    console.log("TestCafe module path:", testCafePath);
+    try {
+        const config = require("testcafe/lib/configuration");
+        console.log("baseUrl from testcafe/lib/configuration:",
+            config && config.default && config.default.getOption("baseUrl"));
+    } catch (e) {
+        console.log("Could not access testcafe/lib/configuration");
+    }
 
-
-    const TestCafeRunner = require("testcafe/lib/runner");
-    console.log("TestCafe runner configuration:");
-    if (TestCafeRunner && TestCafeRunner.configuration) {
-        console.log("baseUrl:", TestCafeRunner.configuration.baseUrl);
+    try {
+        const config = require("testcafe/lib/configuration/config");
+        console.log("baseUrl from testcafe/lib/configuration/config:",
+            config && config.default && config.default.baseUrl);
+    } catch (e) {
+        console.log("Could not access testcafe/lib/configuration/config");
     }
 } catch (error) {
     console.log("Error accessing TestCafe configuration:", error.message);
 }
 
-fixture("API test").page("/");
+fixture("API test");
+
+// eslint-disable-next-line require-await
+test("Debug baseUrl configuration", async (t) => {
+    console.log("t.testRun.opts.baseUrl:", t.testRun.opts.baseUrl);
+});
 
 test("API /stat endpoint is available and returns version", async (t) => {
     const response = await t.request("/stat");
