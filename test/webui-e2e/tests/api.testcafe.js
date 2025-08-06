@@ -1,3 +1,22 @@
+/* global process */
+console.log("Environment variables:", {
+    BASE_URL: process.env.BASE_URL || "not set"
+});
+
+try {
+    const testCafePath = require.resolve("testcafe");
+    console.log("TestCafe module path:", testCafePath);
+
+
+    const TestCafeRunner = require("testcafe/lib/runner");
+    console.log("TestCafe runner configuration:");
+    if (TestCafeRunner && TestCafeRunner.configuration) {
+        console.log("baseUrl:", TestCafeRunner.configuration.baseUrl);
+    }
+} catch (error) {
+    console.log("Error accessing TestCafe configuration:", error.message);
+}
+
 fixture("API test").page("/");
 
 test("API /stat endpoint is available and returns version", async (t) => {
