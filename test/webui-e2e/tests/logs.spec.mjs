@@ -1,7 +1,12 @@
 import {expect, test} from "@playwright/test";
 
 test("Logs page displays recent errors and allows refresh", async ({page}) => {
-    await page.goto("http://localhost:11334");
+    await page.goto("/");
+
+    const passwordInput = page.locator("#connectPassword");
+    await passwordInput.fill("enable");
+    await page.click("#connectButton");
+
     await page.click("#history_nav");
     // Проверяем наличие таблицы ошибок
     await expect(page.locator("#errorsLog")).toBeVisible();

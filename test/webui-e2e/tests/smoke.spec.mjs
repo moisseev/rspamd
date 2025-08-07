@@ -1,10 +1,12 @@
 import {expect, test} from "@playwright/test";
 
-const baseUrl = "http://localhost:11334";
-
 test.describe("WebUI smoke test", () => {
     test("should load WebUI and show main elements", async ({page}) => {
-        await page.goto(baseUrl);
+        await page.goto("/");
+
+        const passwordInput = page.locator("#connectPassword");
+        await passwordInput.fill("read-only");
+        await page.click("#connectButton");
 
         // Wait for preloader to be hidden by JS when loading is complete
         await expect(page.locator("#preloader")).toBeHidden({timeout: 30000});

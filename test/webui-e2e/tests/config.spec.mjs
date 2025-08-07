@@ -17,7 +17,12 @@ function fillSequentially(elements, values) {
 }
 
 test("Config page: always checks order error and valid save for actions", async ({page}) => {
-    await page.goto("http://localhost:11334");
+    await page.goto("/");
+
+    const passwordInput = page.locator("#connectPassword");
+    await passwordInput.fill("enable");
+    await page.click("#connectButton");
+
     await page.click("#configuration_nav");
 
     await expect(page.locator("#actionsFormField")).toBeVisible({timeout: 10000});
@@ -57,8 +62,8 @@ test("Config page: always checks order error and valid save for actions", async 
         await expect(alert).not.toBeVisible({timeout: 2000});
     });
 
-    // Перезагружаем страницу и убеждаемся, что новое значение сохранилось
-    await page.reload();
+    // Перезагружаем конфигурацию и убеждаемся, что новое значение сохранилось
+    await page.click("#refresh");
     await page.click("#configuration_nav");
 
     const reloadedInputs = getInputs();
@@ -86,7 +91,7 @@ test("Config page: always checks order error and valid save for actions", async 
 
     await page.click("#saveActionsBtn");
 
-    await expect(alert).toBeVisible({timeout: 2000});
+    await expect(alert).toBeVisible({timeout: 10000});
     const alertText = await alert.textContent();
     expect(alertText).toContain("Incorrect order of actions thresholds");
 

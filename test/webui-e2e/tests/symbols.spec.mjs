@@ -1,7 +1,12 @@
 import {expect, test} from "@playwright/test";
 
 test("Symbols page shows list of symbols and allows editing", async ({page}) => {
-    await page.goto("http://localhost:11334");
+    await page.goto("/");
+
+    const passwordInput = page.locator("#connectPassword");
+    await passwordInput.fill("enable");
+    await page.click("#connectButton");
+
     await page.click("#symbols_nav");
     await expect(page.locator("#symbolsTable")).toBeVisible();
     // Проверяем, что есть хотя бы одна строка (кроме заголовка)
@@ -15,17 +20,20 @@ test("Symbols page shows list of symbols and allows editing", async ({page}) => 
         expect(filteredCount).toBeGreaterThan(0);
     }
     // Пробуем изменить значение score для первого символа
-    const scoreInput = page.locator("#symbolsTable .scorebar").first();
+    let scoreInput = page.locator("#symbolsTable .scorebar").first();
+    const scoreInputId = await scoreInput.evaluate((element) => element.id);
     const oldValue = await scoreInput.inputValue();
-    await scoreInput.fill("0.01");
+    await scoreInput.fill((parseFloat(oldValue) + 0.01).toFixed(2));
     await scoreInput.blur();
     // Должно появиться уведомление о необходимости сохранения
     await expect(page.locator("#save-alert")).toBeVisible();
     // Сохраняем изменения
     await page.click("#save-alert button");
     // Проверяем, что появилось уведомление об успешном сохранении (ждем любой alert-success)
-    await expect(page.locator(".alert-success, .alert-modal.alert-success")).toBeVisible({timeout: 10000});
+    await expect(page.locator(".alert-success, .alert-modal.alert-success")).toBeVisible();
     // Возвращаем старое значение (чистим за собой)
+    await expect(page.locator(".alert-success, .alert-modal.alert-success")).not.toBeVisible({timeout: 10000});
+    scoreInput = page.locator("#" + scoreInputId);
     await scoreInput.fill(oldValue);
     await scoreInput.blur();
     await page.click("#save-alert button");

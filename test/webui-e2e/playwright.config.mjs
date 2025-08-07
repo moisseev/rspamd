@@ -11,9 +11,12 @@ const config = {
         }
     ],
     reporter: [["html", {open: "never", outputFolder: "playwright-report"}]],
-    retries: 1,
+    retries: 0,
     testDir: "./tests",
     timeout: 30000,
+    use: {
+        baseURL: "http://localhost:11334",
+    },
 };
 
 export default config;
