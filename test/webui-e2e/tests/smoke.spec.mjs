@@ -1,11 +1,13 @@
 import {expect, test} from "@playwright/test";
 
 test.describe("WebUI smoke test", () => {
-    test("should load WebUI and show main elements", async ({page}) => {
+    test("should load WebUI and show main elements", async ({page}, testInfo) => {
+        const {readOnlyPassword} = testInfo.project.use.rspamdPasswords;
+
         await page.goto("/");
 
         const passwordInput = page.locator("#connectPassword");
-        await passwordInput.fill("read-only");
+        await passwordInput.fill(readOnlyPassword);
         await page.click("#connectButton");
 
         // Wait for preloader to be hidden by JS when loading is complete

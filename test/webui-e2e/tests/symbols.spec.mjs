@@ -1,10 +1,12 @@
 import {expect, test} from "@playwright/test";
 
-test("Symbols page shows list of symbols and allows editing", async ({page}) => {
+test("Symbols page shows list of symbols and allows editing", async ({page}, testInfo) => {
+    const {enablePassword} = testInfo.project.use.rspamdPasswords;
+
     await page.goto("/");
 
     const passwordInput = page.locator("#connectPassword");
-    await passwordInput.fill("enable");
+    await passwordInput.fill(enablePassword);
     await page.click("#connectButton");
 
     await page.click("#symbols_nav");

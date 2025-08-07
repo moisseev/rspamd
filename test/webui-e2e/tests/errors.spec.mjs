@@ -1,10 +1,12 @@
 import {expect, test} from "@playwright/test";
 
-test("Shows error alert if backend is unavailable", async ({page}) => {
+test("Shows error alert if backend is unavailable", async ({page}, testInfo) => {
+    const {readOnlyPassword} = testInfo.project.use.rspamdPasswords;
+
     await page.goto("/");
 
     const passwordInput = page.locator("#connectPassword");
-    await passwordInput.fill("read-only");
+    await passwordInput.fill(readOnlyPassword);
     await page.click("#connectButton");
 
     // Пробуем запросить несуществующий endpoint через fetch в браузере

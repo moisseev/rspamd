@@ -16,11 +16,13 @@ function fillSequentially(elements, values) {
     return elements.reduce((promise, el, i) => promise.then(() => el.fill(values[i])), Promise.resolve());
 }
 
-test("Config page: always checks order error and valid save for actions", async ({page}) => {
+test("Config page: always checks order error and valid save for actions", async ({page}, testInfo) => {
+    const {enablePassword} = testInfo.project.use.rspamdPasswords;
+
     await page.goto("/");
 
     const passwordInput = page.locator("#connectPassword");
-    await passwordInput.fill("enable");
+    await passwordInput.fill(enablePassword);
     await page.click("#connectButton");
 
     await page.click("#configuration_nav");

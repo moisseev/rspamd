@@ -16,6 +16,10 @@ const config = {
     timeout: 30000,
     use: {
         baseURL: "http://localhost:11334",
+        rspamdPasswords: {
+            enablePassword: "enable",
+            readOnlyPassword: "read-only",
+        },
     },
 };
 

@@ -1,10 +1,12 @@
 import {expect, test} from "@playwright/test";
 
-test("Logs page displays recent errors and allows refresh", async ({page}) => {
+test("Logs page displays recent errors and allows refresh", async ({page}, testInfo) => {
+    const {enablePassword} = testInfo.project.use.rspamdPasswords;
+
     await page.goto("/");
 
     const passwordInput = page.locator("#connectPassword");
-    await passwordInput.fill("enable");
+    await passwordInput.fill(enablePassword);
     await page.click("#connectButton");
 
     await page.click("#history_nav");
