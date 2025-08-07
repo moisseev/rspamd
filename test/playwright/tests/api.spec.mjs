@@ -1,6 +1,6 @@
 import {expect, request, test} from "@playwright/test";
 
-// eslint-disable-next no-unused-vars
+// eslint-disable-next-line no-unused-vars
 test("API /stat endpoint is available and returns version", async ({page}, testInfo) => {
     const {readOnlyPassword} = testInfo.project.use.rspamdPasswords;
 

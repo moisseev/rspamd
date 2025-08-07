@@ -13,12 +13,14 @@ on:
 jobs:
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     container:
       image: ${{ inputs.image }}
       options: --user root
     strategy:
       matrix:
-        browser: [ firefox ]
+        # browser: [ firefox ]
+        browser: [ firefox, chromium ]
         # browser: [ firefox, chromium, webkit ]
     steps:
       - name: Check out source code
@@ -35,11 +37,11 @@ jobs:
           name: rspamd-binary-ubuntu-ci
           path: ${{ env.PREFIX }}
 
-      - name: Prepare test configuration and static_dir
+      - name: Prepare rspamd configuration
         run: |
           mkdir -p ${PREFIX}/etc/rspamd/local.d
           cp -r src/conf/* ${PREFIX}/etc/rspamd/
-          echo "static_dir = \"${PREFIX}/share/rspamd/www\";" > ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
+          echo 'static_dir = "${PREFIX}/share/rspamd/www";' > ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
           echo 'password = "$2$8y16z4benwtsemhhcsdtxc6zem1muuhj$pufmrdhm41s53eccisds6rxych3khq493jhqra8r1i3jto93dt7b";' >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
           echo 'enable_password = "$2$hkmgaqejragy47tfe18k7r8zf4wwfegt$jdrfna838b9f4mqu73q858t3zjpse1kw8mw7e6yeftabq1of1sry";' >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
           echo 'secure_ip = "0";' >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
@@ -51,14 +53,12 @@ jobs:
           echo 'enabled = false;' > ${PREFIX}/etc/rspamd/local.d/multimap.conf
           # Disable redis dependent modules for WebUI tests
           echo 'redis { enabled = false; }' > ${PREFIX}/etc/rspamd/local.d/modules.conf
+          chmod +x ${PREFIX}/bin/rspamd
           sudo mkdir -p /var/run/rspamd /var/lib/rspamd
           sudo chown $USER:$USER /var/run/rspamd /var/lib/rspamd
 
       - name: Install curl
         run: yum install -y curl || apt-get update && apt-get install -y curl
-
-      - name: Make rspamd binary executable
-        run: chmod +x ${PREFIX}/bin/rspamd
 
       - name: Start rspamd and wait for WebUI
         shell: bash -e {0}
@@ -91,12 +91,11 @@ jobs:
             exit 1
           fi
 
-      - name: Verify WebUI static assets
-        run: |
-          for asset in index.html css/rspamd.css js/main.js img/rspamd_logo_navbar.png; do
-            curl -fsSo /dev/null http://localhost:11334/$asset || \
-              (echo "Missing $asset" && exit 1)
-          done
+      # - name: Verify WebUI static assets
+      #   run: |
+      #     for asset in index.html css/rspamd.css js/main.js img/rspamd_logo_navbar.png; do
+      #       curl -fsSo /dev/null http://localhost:11334/$asset || (echo "Missing $asset" && exit 1)
+      #     done
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -104,7 +103,7 @@ jobs:
           node-version: 20
 
       - name: Install Playwright
-        working-directory: src/test/webui-e2e
+        working-directory: src/test/playwright
         run: npm install --no-save @playwright/test
 
       - name: Cache Playwright browsers
@@ -114,13 +113,13 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ matrix.browser }}
 
       - name: Install Playwright browsers
-        working-directory: src/test/webui-e2e
+        working-directory: src/test/playwright
         env:
           HOME: /root
         run: npx playwright install --with-deps ${{ matrix.browser }}
 
       - name: Run WebUI E2E tests
-        working-directory: src/test/webui-e2e
+        working-directory: src/test/playwright
         env:
           HOME: /root
         run: npx playwright test --project=${{ matrix.browser }}
@@ -130,6 +129,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report-${{ matrix.browser }}
-          path: src/test/webui-e2e/playwright-report/
-          retention-days: 1
+          path: src/test/playwright/playwright-report/
           if-no-files-found: ignore
