@@ -13,7 +13,7 @@ on:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 15  # Общий timeout для всего job - 15 минут
+    timeout-minutes: 15
     # services:
     #   docker:
     #     image: docker:dind
@@ -239,7 +239,7 @@ jobs:
           set +e  # Don't exit on error to capture exit code
           timeout 600 docker run --rm \
             --network rspamd-test-network \
-            -v ${{ github.workspace }}/src/test/webui-e2e:/tests \
+            -v ${{ github.workspace }}/src/test/testcafe:/tests \
             -v ${{ github.workspace }}/screenshots:/tests/screenshots \
             -w /tests \
             testcafe/testcafe:latest \

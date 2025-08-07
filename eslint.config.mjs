@@ -86,7 +86,7 @@ export default [
     },
     {
         // TestCafe E2E tests: allow Node.js globals and TestCafe API
-        files: ["test/webui-e2e/tests/*.js"],
+        files: ["test/testcafe/tests/*.js"],
         languageOptions: {
             ecmaVersion: 2020,
             globals: {
