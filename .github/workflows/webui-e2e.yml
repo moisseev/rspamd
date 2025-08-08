@@ -58,9 +58,7 @@ jobs:
       - name: Start rspamd and wait for WebUI
         shell: bash -e {0}
         run: |
-          ${PREFIX}/bin/rspamd \
-            -c ${PREFIX}/etc/rspamd/rspamd.conf \
-            --insecure &
+          ${PREFIX}/bin/rspamd -c ${PREFIX}/etc/rspamd/rspamd.conf --insecure &
           # Initial delay before polling (in seconds)
           initial_delay=5
           sleep "$initial_delay"
@@ -97,32 +95,77 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Playwright
-        working-directory: src/test/playwright
-        run: npm install --no-save @playwright/test
+      - name: Remove docker config to avoid permission warning
+        run: rm -f /root/.docker/config.json || true
 
-      - name: Cache Playwright browsers
+      - name: Prepare old Playwright environment
+        run: |
+          mkdir -p test-old
+          cp -r src/test/playwright test-old/
+          cd test-old/playwright
+          npm init -y
+          npm install --no-save @playwright/test@1.49.1
+
+      - name: Cache node_modules and playwright browsers (old)
         uses: actions/cache@v4
         with:
-          path: /root/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-all
+          path: |
+            test-old/playwright/node_modules
+            /root/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-old-${{ hashFiles('test-old/playwright/package-lock.json') }}
 
-      - name: Install Playwright browsers
-        working-directory: src/test/playwright
+      - name: Install playwright browsers (old)
+        working-directory: test-old/playwright
         env:
           HOME: /root
         run: npx playwright install --with-deps
 
-      - name: Run WebUI E2E tests (all browsers)
-        working-directory: src/test/playwright
+      - name: Run tests with old Playwright
+        working-directory: test-old/playwright
         env:
           HOME: /root
-        run: npx playwright test
+        run: npx playwright test --output=../../playwright-report-old
 
-      - name: Upload Playwright report
+      - name: Prepare new Playwright environment
+        run: |
+          mkdir -p test-new
+          cp -r src/test/playwright test-new/
+          cd test-new/playwright
+          npm init -y
+          npm install --no-save @playwright/test@latest
+
+      - name: Cache node_modules and playwright browsers (new)
+        uses: actions/cache@v4
+        with:
+          path: |
+            test-new/playwright/node_modules
+            /root/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-new-${{ hashFiles('test-new/playwright/package-lock.json') }}
+
+      - name: Install playwright browsers (new)
+        working-directory: test-new/playwright
+        env:
+          HOME: /root
+        run: npx playwright install --with-deps
+
+      - name: Run tests with new Playwright
+        working-directory: test-new/playwright
+        env:
+          HOME: /root
+        run: npx playwright test --output=../../playwright-report-new
+
+      - name: Upload Playwright reports (old)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: src/test/playwright/playwright-report/
+          name: playwright-report-old
+          path: playwright-report-old/
+          if-no-files-found: ignore
+
+      - name: Upload Playwright reports (new)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-new
+          path: playwright-report-new/
           if-no-files-found: ignore
