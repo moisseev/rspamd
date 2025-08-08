@@ -19,9 +19,7 @@ jobs:
       options: --user root
     strategy:
       matrix:
-        # browser: [ firefox ]
-        browser: [ firefox, chromium ]
-        # browser: [ firefox, chromium, webkit ]
+        browser: [ firefox, chromium, webkit ]
     steps:
       - name: Check out source code
         uses: actions/checkout@v4

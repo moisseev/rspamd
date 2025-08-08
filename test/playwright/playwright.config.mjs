@@ -8,6 +8,10 @@ const config = {
         {
             name: "chromium",
             use: {browserName: "chromium"}
+        },
+        {
+            name: "webkit",
+            use: {browserName: "webkit"}
         }
     ],
     reporter: [["html", {open: "never", outputFolder: "playwright-report"}]],
