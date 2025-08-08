@@ -95,77 +95,74 @@ jobs:
         with:
           node-version: 20
 
-      - name: Remove docker config to avoid permission warning
-        run: rm -f /root/.docker/config.json || true
-
-      - name: Prepare old Playwright environment
+      - name: Prepare legacy Playwright environment
         run: |
-          mkdir -p test-old
-          cp -r src/test/playwright test-old/
-          cd test-old/playwright
+          mkdir -p test-legacy
+          cp -r src/test/playwright test-legacy/
+          cd test-legacy/playwright
           npm init -y
-          npm install --no-save @playwright/test@1.49.1
+          npm install --no-save @playwright/test@1.44.0
 
-      - name: Cache node_modules and playwright browsers (old)
+      - name: Cache node_modules and playwright browsers (legacy)
         uses: actions/cache@v4
         with:
           path: |
-            test-old/playwright/node_modules
+            test-legacy/playwright/node_modules
             /root/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-old-${{ hashFiles('test-old/playwright/package-lock.json') }}
+          key: ${{ runner.os }}-playwright-legacy-${{ hashFiles('test-legacy/playwright/package-lock.json') }}
 
-      - name: Install playwright browsers (old)
-        working-directory: test-old/playwright
+      - name: Install playwright browsers (legacy)
+        working-directory: test-legacy/playwright
         env:
           HOME: /root
         run: npx playwright install --with-deps
 
-      - name: Run tests with old Playwright
-        working-directory: test-old/playwright
+      - name: Run tests with legacy Playwright
+        working-directory: test-legacy/playwright
         env:
           HOME: /root
-        run: npx playwright test --output=../../playwright-report-old
+        run: npx playwright test --output=../../playwright-report-legacy
 
-      - name: Prepare new Playwright environment
+      - name: Prepare latest Playwright environment
         run: |
-          mkdir -p test-new
-          cp -r src/test/playwright test-new/
-          cd test-new/playwright
+          mkdir -p test-latest
+          cp -r src/test/playwright test-latest/
+          cd test-latest/playwright
           npm init -y
           npm install --no-save @playwright/test@latest
 
-      - name: Cache node_modules and playwright browsers (new)
+      - name: Cache node_modules and playwright browsers (latest)
         uses: actions/cache@v4
         with:
           path: |
-            test-new/playwright/node_modules
+            test-latest/playwright/node_modules
             /root/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-new-${{ hashFiles('test-new/playwright/package-lock.json') }}
+          key: ${{ runner.os }}-playwright-latest-${{ hashFiles('test-latest/playwright/package-lock.json') }}
 
-      - name: Install playwright browsers (new)
-        working-directory: test-new/playwright
+      - name: Install playwright browsers (latest)
+        working-directory: test-latest/playwright
         env:
           HOME: /root
         run: npx playwright install --with-deps
 
-      - name: Run tests with new Playwright
-        working-directory: test-new/playwright
+      - name: Run tests with latest Playwright
+        working-directory: test-latest/playwright
         env:
           HOME: /root
-        run: npx playwright test --output=../../playwright-report-new
+        run: npx playwright test --output=../../playwright-report-latest
 
-      - name: Upload Playwright reports (old)
+      - name: Upload Playwright reports (legacy)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-old
-          path: playwright-report-old/
+          name: playwright-report-legacy
+          path: playwright-report-legacy/
           if-no-files-found: ignore
 
-      - name: Upload Playwright reports (new)
+      - name: Upload Playwright reports (latest)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-new
-          path: playwright-report-new/
+          name: playwright-report-latest
+          path: playwright-report-latest/
           if-no-files-found: ignore
