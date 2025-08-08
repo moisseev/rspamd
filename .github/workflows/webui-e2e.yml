@@ -17,9 +17,6 @@ jobs:
     container:
       image: ${{ inputs.image }}
       options: --user root
-    strategy:
-      matrix:
-        browser: [ firefox, chromium, webkit ]
     steps:
       - name: Check out source code
         uses: actions/checkout@v4
@@ -108,24 +105,24 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /root/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ matrix.browser }}
+          key: ${{ runner.os }}-playwright-all
 
       - name: Install Playwright browsers
         working-directory: src/test/playwright
         env:
           HOME: /root
-        run: npx playwright install --with-deps ${{ matrix.browser }}
+        run: npx playwright install --with-deps
 
-      - name: Run WebUI E2E tests
+      - name: Run WebUI E2E tests (all browsers)
         working-directory: src/test/playwright
         env:
           HOME: /root
-        run: npx playwright test --project=${{ matrix.browser }}
+        run: npx playwright test
 
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-${{ matrix.browser }}
+          name: playwright-report
           path: src/test/playwright/playwright-report/
           if-no-files-found: ignore
