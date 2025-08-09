@@ -84,16 +84,22 @@ jobs:
             exit 1
           fi
 
-      # - name: Verify WebUI static assets
-      #   run: |
-      #     for asset in index.html css/rspamd.css js/main.js img/rspamd_logo_navbar.png; do
-      #       curl -fsSo /dev/null http://localhost:11334/$asset || (echo "Missing $asset" && exit 1)
-      #     done
-
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Cache Playwright browsers (legacy)
+        uses: actions/cache@v4
+        with:
+          path: .cache/ms-playwright-legacy
+          key: browsers-legacy-${{ runner.os }}
+
+      - name: Cache Playwright browsers (latest)
+        uses: actions/cache@v4
+        with:
+          path: .cache/ms-playwright-latest
+          key: browsers-latest-${{ runner.os }}
 
       - name: Run Playwright tests (legacy and latest)
         env:
@@ -112,6 +118,8 @@ jobs:
 
             npm init -y
             npm install --no-save @playwright/test@$ver
+
+            export PLAYWRIGHT_BROWSERS_PATH=$GITHUB_WORKSPACE/.cache/ms-playwright-$label
             npx playwright install --with-deps
 
             npx playwright test --output=../../playwright-report-$label
