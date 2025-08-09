@@ -13,6 +13,8 @@ on:
 jobs:
   e2e:
     runs-on: ubuntu-latest
+    env:
+      HOME: /root
     timeout-minutes: 15
     container:
       image: ${{ inputs.image }}
@@ -95,61 +97,28 @@ jobs:
         with:
           node-version: 20
 
-      - name: Prepare legacy Playwright environment
+      - name: Run Playwright tests (legacy and latest)
+        env:
+          HOME: /root
         run: |
-          mkdir -p test-legacy
-          cp -r src/test/playwright test-legacy/
-          cd test-legacy/playwright
-          npm init -y
-          npm install --no-save @playwright/test@1.44.0
+          set -e
+          for version in "1.49.1 legacy" "latest latest"; do
+            ver=${version% *}
+            label=${version#* }
 
-      - name: Cache node_modules and playwright browsers (legacy)
-        uses: actions/cache@v4
-        with:
-          path: |
-            test-legacy/playwright/node_modules
-            /root/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-legacy-${{ hashFiles('test-legacy/playwright/package-lock.json') }}
+            echo "=== Running Playwright $ver ($label) ==="
 
-      - name: Install playwright browsers (legacy)
-        working-directory: test-legacy/playwright
-        env:
-          HOME: /root
-        run: npx playwright install --with-deps
+            mkdir -p test-$label
+            cp -r src/test/playwright test-$label/
+            cd test-$label/playwright
 
-      - name: Run tests with legacy Playwright
-        working-directory: test-legacy/playwright
-        env:
-          HOME: /root
-        run: npx playwright test --output=../../playwright-report-legacy
+            npm init -y
+            npm install --no-save @playwright/test@$ver
+            npx playwright install --with-deps
 
-      - name: Prepare latest Playwright environment
-        run: |
-          mkdir -p test-latest
-          cp -r src/test/playwright test-latest/
-          cd test-latest/playwright
-          npm init -y
-          npm install --no-save @playwright/test@latest
-
-      - name: Cache node_modules and playwright browsers (latest)
-        uses: actions/cache@v4
-        with:
-          path: |
-            test-latest/playwright/node_modules
-            /root/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-latest-${{ hashFiles('test-latest/playwright/package-lock.json') }}
-
-      - name: Install playwright browsers (latest)
-        working-directory: test-latest/playwright
-        env:
-          HOME: /root
-        run: npx playwright install --with-deps
-
-      - name: Run tests with latest Playwright
-        working-directory: test-latest/playwright
-        env:
-          HOME: /root
-        run: npx playwright test --output=../../playwright-report-latest
+            npx playwright test --output=../../playwright-report-$label
+            cd ../..
+          done
 
       - name: Upload Playwright reports (legacy)
         if: always()
