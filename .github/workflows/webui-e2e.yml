@@ -100,7 +100,7 @@ jobs:
           HOME: /root
         run: |
           set -e
-          for version in "1.46.1 legacy" "latest latest"; do
+          for version in "1.45.3 legacy" "latest latest"; do
             ver=${version% *}
             label=${version#* }
 
