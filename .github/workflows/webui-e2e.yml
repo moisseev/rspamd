@@ -13,8 +13,6 @@ on:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    env:
-      HOME: /root
     timeout-minutes: 15
     container:
       image: ${{ inputs.image }}
@@ -102,7 +100,7 @@ jobs:
           HOME: /root
         run: |
           set -e
-          for version in "1.49.1 legacy" "latest latest"; do
+          for version in "1.48.2 legacy" "latest latest"; do
             ver=${version% *}
             label=${version#* }
 
