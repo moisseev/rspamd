@@ -17,6 +17,13 @@ jobs:
     container:
       image: ${{ inputs.image }}
       options: --user root
+    strategy:
+      matrix:
+        include:
+          - version: 1.45.3
+            label: legacy
+          - version: latest
+            label: latest
     steps:
       - name: Check out source code
         uses: actions/checkout@v4
@@ -52,11 +59,7 @@ jobs:
           sudo mkdir -p /var/run/rspamd /var/lib/rspamd
           sudo chown $USER:$USER /var/run/rspamd /var/lib/rspamd
 
-      - name: Install curl
-        run: yum install -y curl || apt-get update && apt-get install -y curl
-
       - name: Start rspamd and wait for WebUI
-        shell: bash -e {0}
         run: |
           ${PREFIX}/bin/rspamd -c ${PREFIX}/etc/rspamd/rspamd.conf --insecure &
           # Initial delay before polling (in seconds)
@@ -65,19 +68,18 @@ jobs:
           # Wait up to 60 seconds for WebUI to respond
           max_retries=30
           for i in $(seq 1 "$max_retries"); do
-            http_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:11334/ping || true)
+            http_code=$(wget -qO- --server-response http://localhost:11334/ping 2>&1 | awk '/^[[:space:]]*HTTP/ {print $2}' | tail -n1 || true)
             if [[ "$http_code" == "200" ]]; then
               elapsed=$(( initial_delay + (i - 1) * 2 ))
               echo "Rspamd WebUI is up (HTTP 200) after $elapsed seconds"
               break
-            elif [[ "$http_code" != "000" ]]; then
+            elif [[ -n "$http_code" && "$http_code" != "000" ]]; then
               echo "Unexpected HTTP code $http_code from /ping; failing"
               exit 1
             fi
             echo "Waiting for rspamd... ($i/$max_retries)"
             sleep 2
           done
-
           if [[ "$i" -eq "$max_retries" && "$http_code" != "200" ]]; then
             total_wait=$(( initial_delay + max_retries * 2 ))
             echo "ERROR: rspamd WebUI did not become available after $total_wait seconds"
@@ -89,64 +91,37 @@ jobs:
         with:
           node-version: 20
 
-      - name: Cache Playwright browsers (legacy)
+      - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
-          path: .cache/ms-playwright-legacy
-          key: browsers-legacy-${{ runner.os }}
+          path: .cache/ms-playwright-${{ matrix.label }}
+          key: browsers-${{ matrix.label }}-${{ runner.os }}
 
-      - name: Cache Playwright browsers (latest)
-        uses: actions/cache@v4
-        with:
-          path: .cache/ms-playwright-latest
-          key: browsers-latest-${{ runner.os }}
-
-      - name: Run Playwright tests (legacy and latest)
+      - name: Run Playwright tests (${{ matrix.label }})
         env:
           HOME: /root
+          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright-${{ matrix.label }}
         run: |
-          set -e
-          for version in "1.45.3 legacy" "latest latest"; do
-            ver=${version% *}
-            label=${version#* }
+          mkdir -p test-${{ matrix.label }}
+          cp -r src/test/playwright test-${{ matrix.label }}/
+          cd test-${{ matrix.label }}/playwright
 
-            echo "=== Running Playwright $ver ($label) ==="
+          npm init -y --silent
+          echo "::group::Installing Playwright ${{ matrix.label }}"
+          npm install --no-save --silent @playwright/test@${{ matrix.version }}
+          npx playwright --version
+          npx playwright install --with-deps
+          echo "::endgroup::"
 
-            mkdir -p test-$label
-            cp -r src/test/playwright test-$label/
-            cd test-$label/playwright
+          echo "::group::Running tests (${{ matrix.label }})"
+          npx playwright test --output=../../playwright-report-${{ matrix.label }}
+          echo "::endgroup::"
+          cd ../..
 
-            npm init -y --silent
-
-            echo "::group::Installing Playwright $label"
-            npm install --no-save --silent @playwright/test@$ver
-
-            export PLAYWRIGHT_BROWSERS_PATH=$GITHUB_WORKSPACE/.cache/ms-playwright-$label
-
-            npx playwright --version
-            npx playwright install --with-deps 2>&1 | tr '\r' '\n' | sed 's/\x1b\[[0-9;]*m//g' | grep Downloading || true
-
-            echo "::endgroup::"
-
-            echo "::group::Running tests ($label)"
-            npx playwright test --output=../../playwright-report-$label
-            echo "::endgroup::"
-
-            cd ../..
-          done
-
-      - name: Upload Playwright reports (legacy)
+      - name: Upload Playwright reports (${{ matrix.label }})
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-legacy
-          path: playwright-report-legacy/
-          if-no-files-found: ignore
-
-      - name: Upload Playwright reports (latest)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-latest
-          path: playwright-report-latest/
+          name: playwright-report-${{ matrix.label }}
+          path: playwright-report-${{ matrix.label }}/
           if-no-files-found: ignore
