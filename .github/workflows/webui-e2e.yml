@@ -98,11 +98,13 @@ jobs:
           path: .cache/ms-playwright-${{ matrix.label }}
           key: browsers-${{ matrix.label }}-${{ runner.os }}
 
-      - name: Run Playwright tests (${{ matrix.label }})
+      - id: run-playwright
+        name: Run Playwright tests (${{ matrix.label }})
         env:
           HOME: /root
           PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright-${{ matrix.label }}
         run: |
+          set -e
           mkdir -p test-${{ matrix.label }}
           cp -r src/test/playwright test-${{ matrix.label }}/
           cd test-${{ matrix.label }}/playwright
@@ -115,19 +117,29 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::Running tests (${{ matrix.label }})"
-          npx playwright test --output=../../playwright-report-${{ matrix.label }}
-          echo "::endgroup::"
-          cd ../..
+          # Run tests; store Playwright artifacts (traces/videos) separately from HTML report
+          ARTIFACTS_DIR="$GITHUB_WORKSPACE/playwright-artifacts-${{ matrix.label }}"
+          npx playwright test --output="$ARTIFACTS_DIR"
 
-      - name: Verify playwright-report-${{ matrix.label }} contents
-        run: ls -l playwright-report-${{ matrix.label }} || echo "No report directory found"
-      - name: Verify ${{ github.workspace }}/playwright-report-${{ matrix.label }} contents
-        run: ls -l ${{ github.workspace }}/playwright-report-${{ matrix.label }} || echo "No report directory found"
+          # HTML report is produced by the html reporter into ./playwright-report relative to CWD
+          REPORT_DIR="$PWD/playwright-report"
+          HTML_OUT="$GITHUB_WORKSPACE/playwright-report-${{ matrix.label }}"
+          if [ -d "$REPORT_DIR" ]; then
+            # Copy to a stable location outside the test folder for artifact upload
+            cp -r "$REPORT_DIR" "$HTML_OUT"
+          else
+            # Ensure the upload step has something to pick up even if no report was generated
+            mkdir -p "$HTML_OUT"
+            echo "No Playwright HTML report was generated" > "$HTML_OUT/README.txt"
+          fi
+
+          echo "report_path=$HTML_OUT" >> "$GITHUB_OUTPUT"
+          echo "::endgroup::"
 
       - name: Upload Playwright reports (${{ matrix.label }})
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report-${{ matrix.label }}
-          path: playwright-report-${{ matrix.label }}/
+          path: ${{ steps.run-playwright.outputs.report_path }}
           if-no-files-found: ignore
