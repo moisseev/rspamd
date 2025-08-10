@@ -69,18 +69,19 @@ jobs:
           max_retries=30
           for i in $(seq 1 "$max_retries"); do
             http_code=$(wget -qO- --server-response http://localhost:11334/ping 2>&1 | awk '/^[[:space:]]*HTTP/ {print $2}' | tail -n1 || true)
-            if [[ "$http_code" == "200" ]]; then
+            if [ "$http_code" = "200" ]; then
               elapsed=$(( initial_delay + (i - 1) * 2 ))
               echo "Rspamd WebUI is up (HTTP 200) after $elapsed seconds"
               break
-            elif [[ -n "$http_code" && "$http_code" != "000" ]]; then
+            elif [ -n "$http_code" ] && [ "$http_code" != "000" ]; then
               echo "Unexpected HTTP code $http_code from /ping; failing"
               exit 1
             fi
             echo "Waiting for rspamd... ($i/$max_retries)"
             sleep 2
           done
-          if [[ "$i" -eq "$max_retries" && "$http_code" != "200" ]]; then
+
+          if [ "$i" -eq "$max_retries" ] && [ "$http_code" != "200" ]; then
             total_wait=$(( initial_delay + max_retries * 2 ))
             echo "ERROR: rspamd WebUI did not become available after $total_wait seconds"
             exit 1
