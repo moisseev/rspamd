@@ -119,6 +119,11 @@ jobs:
           echo "::endgroup::"
           cd ../..
 
+      - name: Verify playwright-report-${{ matrix.label }} contents
+        run: ls -l playwright-report-${{ matrix.label }} || echo "No report directory found"
+      - name: Verify ${{ github.workspace }}/playwright-report-${{ matrix.label }} contents
+        run: ls -l ${{ github.workspace }}/playwright-report-${{ matrix.label }} || echo "No report directory found"
+
       - name: Upload Playwright reports (${{ matrix.label }})
         if: always()
         uses: actions/upload-artifact@v4
