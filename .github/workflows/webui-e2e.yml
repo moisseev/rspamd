@@ -124,7 +124,7 @@ jobs:
             export PLAYWRIGHT_BROWSERS_PATH=$GITHUB_WORKSPACE/.cache/ms-playwright-$label
 
             npx playwright --version
-            npx playwright install --with-deps | sed -n 's/^[^ ]* Downloading \(.*\) from.*/\1/p' || true
+            npx playwright install --with-deps 2>&1 | tr '\r' '\n' | sed 's/\x1b\[[0-9;]*m//g' | grep Downloading || true
 
             echo "::endgroup::"
 
