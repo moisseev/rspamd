@@ -14,10 +14,16 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+    concurrency:
+      group: webui-e2e-${{ github.ref }}
+      cancel-in-progress: true
     container:
       image: ${{ inputs.image }}
       options: --user root
     strategy:
+      fail-fast: false
       matrix:
         include:
           - version: 1.45.3
@@ -56,8 +62,8 @@ jobs:
           # Disable redis dependent modules for WebUI tests
           echo 'redis { enabled = false; }' > ${PREFIX}/etc/rspamd/local.d/modules.conf
           chmod +x ${PREFIX}/bin/rspamd
-          sudo mkdir -p /var/run/rspamd /var/lib/rspamd
-          sudo chown $USER:$USER /var/run/rspamd /var/lib/rspamd
+          mkdir -p /var/run/rspamd /var/lib/rspamd
+          chown $USER:$USER /var/run/rspamd /var/lib/rspamd
 
       - name: Start rspamd and wait for WebUI
         run: |
@@ -119,17 +125,19 @@ jobs:
           echo "::group::Running tests (${{ matrix.label }})"
           # Run tests; store Playwright artifacts (traces/videos) separately from HTML report
           ARTIFACTS_DIR="$GITHUB_WORKSPACE/playwright-artifacts-${{ matrix.label }}"
-          npx playwright test --output="$ARTIFACTS_DIR"
-
-          # HTML report is produced by the html reporter into ./playwright-report relative to CWD
-          REPORT_DIR="$PWD/playwright-report"
           HTML_OUT="$GITHUB_WORKSPACE/playwright-report-${{ matrix.label }}"
-          if [ -d "$REPORT_DIR" ]; then
-            # Copy to a stable location outside the test folder for artifact upload
-            cp -r "$REPORT_DIR" "$HTML_OUT"
-          fi
+          npx playwright test \
+            --output="$ARTIFACTS_DIR" \
+            --reporter=html \
+            --reporter-options=outputFolder="$HTML_OUT"
 
           echo "report_path=$HTML_OUT" >> "$GITHUB_OUTPUT"
+          {
+            echo "### WebUI E2E (${{ matrix.label }})"
+            echo
+            echo "- HTML report: $HTML_OUT"
+            echo "- Artifacts dir: $ARTIFACTS_DIR"
+          } >> "$GITHUB_STEP_SUMMARY"
           echo "::endgroup::"
 
       - name: Upload Playwright reports (${{ matrix.label }})
@@ -138,4 +146,12 @@ jobs:
         with:
           name: playwright-report-${{ matrix.label }}
           path: ${{ steps.run-playwright.outputs.report_path }}
+          if-no-files-found: ignore
+
+      - name: Upload Playwright artifacts on failure (${{ matrix.label }})
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts-${{ matrix.label }}
+          path: ${{ github.workspace }}/playwright-artifacts-${{ matrix.label }}
           if-no-files-found: ignore
