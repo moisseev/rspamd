@@ -10,15 +10,16 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: webui-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
-    concurrency:
-      group: webui-e2e-${{ github.ref }}
-      cancel-in-progress: true
     container:
       image: ${{ inputs.image }}
       options: --user root
@@ -134,14 +135,7 @@ jobs:
           if [ -d "$REPORT_DIR" ]; then
             mv "$REPORT_DIR" "$HTML_OUT"
           fi
-
           echo "report_path=$HTML_OUT" >> "$GITHUB_OUTPUT"
-          {
-            echo "### WebUI E2E (${{ matrix.label }})"
-            echo
-            echo "- HTML report: $HTML_OUT"
-            echo "- Artifacts dir: $ARTIFACTS_DIR"
-          } >> "$GITHUB_STEP_SUMMARY"
           echo "::endgroup::"
           exit $PW_STATUS
 
