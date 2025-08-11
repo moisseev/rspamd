@@ -24,6 +24,7 @@ const config = {
             enablePassword: "enable",
             readOnlyPassword: "read-only",
         },
+        screenshot: "on-first-failure",
     },
 };
 

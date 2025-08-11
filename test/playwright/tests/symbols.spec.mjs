@@ -3,7 +3,6 @@ import {login} from "../helpers/auth.mjs";
 
 test("Symbols page shows list of symbols and allows editing", async ({page}, testInfo) => {
     const {enablePassword} = testInfo.project.use.rspamdPasswords;
-
     await login(page, enablePassword);
 
     await page.locator("#symbols_nav").click();

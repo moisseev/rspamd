@@ -19,11 +19,9 @@ function fillSequentially(elements, values) {
 
 test("Config page: always checks order error and valid save for actions", async ({page}, testInfo) => {
     const {enablePassword} = testInfo.project.use.rspamdPasswords;
-
     await login(page, enablePassword);
 
     await page.locator("#configuration_nav").click();
-
     await expect(page.locator("#actionsFormField")).toBeVisible({timeout: 10000});
 
     function getInputs() { return page.locator("#actionsFormField input[data-id='action']"); }

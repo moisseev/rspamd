@@ -3,7 +3,6 @@ import {login} from "../helpers/auth.mjs";
 
 test("Logs page displays recent errors and allows refresh", async ({page}, testInfo) => {
     const {enablePassword} = testInfo.project.use.rspamdPasswords;
-
     await login(page, enablePassword);
 
     await page.locator("#history_nav").click();
