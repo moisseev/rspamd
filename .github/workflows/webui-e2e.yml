@@ -129,7 +129,7 @@ jobs:
           npx playwright test \
             --output="$ARTIFACTS_DIR" \
             --reporter=html \
-            --reporter-options=outputFolder="$HTML_OUT"
+            --reporter-option outputFolder="$HTML_OUT"
 
           echo "report_path=$HTML_OUT" >> "$GITHUB_OUTPUT"
           {
