@@ -22,7 +22,7 @@ test("Config page: always checks order error and valid save for actions", async 
 
     await login(page, enablePassword);
 
-    await page.click("#configuration_nav");
+    await page.locator("#configuration_nav").click();
 
     await expect(page.locator("#actionsFormField")).toBeVisible({timeout: 10000});
 
@@ -55,15 +55,15 @@ test("Config page: always checks order error and valid save for actions", async 
 
     await fillSequentially(fillableInputs, correctOrder);
 
-    await page.click("#saveActionsBtn");
+    await page.locator("#saveActionsBtn").click();
 
     await logAlertOnError(page, alert, async () => {
         await expect(alert).not.toBeVisible({timeout: 2000});
     });
 
     // Перезагружаем конфигурацию и убеждаемся, что новое значение сохранилось
-    await page.click("#refresh");
-    await page.click("#configuration_nav");
+    await page.locator("#refresh").click();
+    await page.locator("#configuration_nav").click();
 
     const reloadedInputs = getInputs();
     const reloadedCount = await reloadedInputs.count();
@@ -88,7 +88,7 @@ test("Config page: always checks order error and valid save for actions", async 
 
     await fillSequentially(reloadedFillableInputs, wrongOrder);
 
-    await page.click("#saveActionsBtn");
+    await page.locator("#saveActionsBtn").click();
 
     await expect(alert).toBeVisible({timeout: 10000});
     const alertText = await alert.textContent();
@@ -97,5 +97,5 @@ test("Config page: always checks order error and valid save for actions", async 
     // Возвращаем исходные значения
     await fillSequentially(reloadedFillableInputs, values);
 
-    await page.click("#saveActionsBtn");
+    await page.locator("#saveActionsBtn").click();
 });

@@ -6,7 +6,7 @@ test("Symbols page shows list of symbols and allows editing", async ({page}, tes
 
     await login(page, enablePassword);
 
-    await page.click("#symbols_nav");
+    await page.locator("#symbols_nav").click();
     await expect(page.locator("#symbolsTable")).toBeVisible();
     // Проверяем, что есть хотя бы одна строка (кроме заголовка)
     const rowCount = await page.locator("#symbolsTable tbody tr").count();
@@ -27,7 +27,7 @@ test("Symbols page shows list of symbols and allows editing", async ({page}, tes
     // Должно появиться уведомление о необходимости сохранения
     await expect(page.locator("#save-alert")).toBeVisible();
     // Сохраняем изменения
-    await page.click("#save-alert button");
+    await page.locator("#save-alert").getByRole("button", {exact: true, name: "Save"}).click();
     // Проверяем, что появилось уведомление об успешном сохранении (ждем любой alert-success)
     await expect(page.locator(".alert-success, .alert-modal.alert-success")).toBeVisible();
     // Возвращаем старое значение (чистим за собой)
@@ -35,5 +35,5 @@ test("Symbols page shows list of symbols and allows editing", async ({page}, tes
     scoreInput = page.locator("#" + scoreInputId);
     await scoreInput.fill(oldValue);
     await scoreInput.blur();
-    await page.click("#save-alert button");
+    await page.locator("#save-alert").getByRole("button", {exact: true, name: "Save"}).click();
 });
