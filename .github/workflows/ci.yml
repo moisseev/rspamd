@@ -44,7 +44,7 @@ jobs:
 
   webui-e2e:
     needs: ubuntu
-    uses: ./.github/workflows/webui-e2e.yml
+    uses: ./.github/workflows/ci_webui_e2e_playwright.yml
     with:
       image: ghcr.io/rspamd/rspamd-build-docker:ubuntu-ci
       name: ubuntu-ci
