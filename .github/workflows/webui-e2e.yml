@@ -126,10 +126,14 @@ jobs:
           # Run tests; store Playwright artifacts (traces/videos) separately from HTML report
           ARTIFACTS_DIR="$GITHUB_WORKSPACE/playwright-artifacts-${{ matrix.label }}"
           HTML_OUT="$GITHUB_WORKSPACE/playwright-report-${{ matrix.label }}"
-          npx playwright test \
-            --output="$ARTIFACTS_DIR" \
-            --reporter=html \
-            --reporter-option outputFolder="$HTML_OUT"
+          set +e
+          npx playwright test --output="$ARTIFACTS_DIR"
+          PW_STATUS=$?
+          set -e
+          REPORT_DIR="$PWD/playwright-report"
+          if [ -d "$REPORT_DIR" ]; then
+            mv "$REPORT_DIR" "$HTML_OUT"
+          fi
 
           echo "report_path=$HTML_OUT" >> "$GITHUB_OUTPUT"
           {
@@ -139,13 +143,14 @@ jobs:
             echo "- Artifacts dir: $ARTIFACTS_DIR"
           } >> "$GITHUB_STEP_SUMMARY"
           echo "::endgroup::"
+          exit $PW_STATUS
 
       - name: Upload Playwright reports (${{ matrix.label }})
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report-${{ matrix.label }}
-          path: ${{ steps.run-playwright.outputs.report_path }}
+          path: ${{ github.workspace }}/playwright-report-${{ matrix.label }}
           if-no-files-found: ignore
 
       - name: Upload Playwright artifacts on failure (${{ matrix.label }})
