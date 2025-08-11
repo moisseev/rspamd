@@ -1,13 +1,10 @@
 import {expect, test} from "@playwright/test";
+import {login} from "../helpers/auth.mjs";
 
 test("Main page is accessible and shows dashboard", async ({page}, testInfo) => {
     const {readOnlyPassword} = testInfo.project.use.rspamdPasswords;
 
-    await page.goto("/");
-
-    const passwordInput = page.locator("#connectPassword");
-    await passwordInput.fill(readOnlyPassword);
-    await page.click("#connectButton");
+    await login(page, readOnlyPassword);
 
     await expect(page).toHaveTitle(/Rspamd Web Interface/i);
     await expect(page.locator("#navBar")).toBeVisible();

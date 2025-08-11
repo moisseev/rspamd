@@ -1,13 +1,10 @@
 import {expect, test} from "@playwright/test";
+import {login} from "../helpers/auth.mjs";
 
 test("Shows error alert if backend is unavailable", async ({page}, testInfo) => {
     const {readOnlyPassword} = testInfo.project.use.rspamdPasswords;
 
-    await page.goto("/");
-
-    const passwordInput = page.locator("#connectPassword");
-    await passwordInput.fill(readOnlyPassword);
-    await page.click("#connectButton");
+    await login(page, readOnlyPassword);
 
     // Пробуем запросить несуществующий endpoint через fetch в браузере
     await Promise.all([

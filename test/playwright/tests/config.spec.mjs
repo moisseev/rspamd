@@ -1,4 +1,5 @@
 import {expect, test} from "@playwright/test";
+import {login} from "../helpers/auth.mjs";
 
 async function logAlertOnError(page, locator, fn) {
     try {
@@ -19,11 +20,7 @@ function fillSequentially(elements, values) {
 test("Config page: always checks order error and valid save for actions", async ({page}, testInfo) => {
     const {enablePassword} = testInfo.project.use.rspamdPasswords;
 
-    await page.goto("/");
-
-    const passwordInput = page.locator("#connectPassword");
-    await passwordInput.fill(enablePassword);
-    await page.click("#connectButton");
+    await login(page, enablePassword);
 
     await page.click("#configuration_nav");
 

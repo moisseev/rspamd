@@ -1,13 +1,10 @@
 import {expect, test} from "@playwright/test";
+import {login} from "../helpers/auth.mjs";
 
 test("Logs page displays recent errors and allows refresh", async ({page}, testInfo) => {
     const {enablePassword} = testInfo.project.use.rspamdPasswords;
 
-    await page.goto("/");
-
-    const passwordInput = page.locator("#connectPassword");
-    await passwordInput.fill(enablePassword);
-    await page.click("#connectButton");
+    await login(page, enablePassword);
 
     await page.click("#history_nav");
     // Проверяем наличие таблицы ошибок

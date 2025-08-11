@@ -1,11 +1,9 @@
-import {expect, request, test} from "@playwright/test";
+import {expect, test} from "@playwright/test";
 
-// eslint-disable-next-line no-unused-vars
-test("API /stat endpoint is available and returns version", async ({page}, testInfo) => {
+test("API /stat endpoint is available and returns version", async ({request}, testInfo) => {
     const {readOnlyPassword} = testInfo.project.use.rspamdPasswords;
 
-    const api = await request.newContext();
-    const response = await api.get("/stat", {headers: {Password: readOnlyPassword}});
+    const response = await request.get("/stat", {headers: {Password: readOnlyPassword}});
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data).toHaveProperty("version");

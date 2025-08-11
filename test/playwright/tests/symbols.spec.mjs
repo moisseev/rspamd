@@ -1,13 +1,10 @@
 import {expect, test} from "@playwright/test";
+import {login} from "../helpers/auth.mjs";
 
 test("Symbols page shows list of symbols and allows editing", async ({page}, testInfo) => {
     const {enablePassword} = testInfo.project.use.rspamdPasswords;
 
-    await page.goto("/");
-
-    const passwordInput = page.locator("#connectPassword");
-    await passwordInput.fill(enablePassword);
-    await page.click("#connectButton");
+    await login(page, enablePassword);
 
     await page.click("#symbols_nav");
     await expect(page.locator("#symbolsTable")).toBeVisible();
