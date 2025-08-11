@@ -127,10 +127,6 @@ jobs:
           if [ -d "$REPORT_DIR" ]; then
             # Copy to a stable location outside the test folder for artifact upload
             cp -r "$REPORT_DIR" "$HTML_OUT"
-          else
-            # Ensure the upload step has something to pick up even if no report was generated
-            mkdir -p "$HTML_OUT"
-            echo "No Playwright HTML report was generated" > "$HTML_OUT/README.txt"
           fi
 
           echo "report_path=$HTML_OUT" >> "$GITHUB_OUTPUT"
