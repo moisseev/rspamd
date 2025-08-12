@@ -25,46 +25,53 @@ test.describe("Symbols", () => {
                 return {text: op.text, value: op.value};
             });
 
-            // Read current texts before filtering
-            const beforeTexts = await page.locator("#symbolsTable tbody tr td.footable-first-visible").allTextContents();
+            const groupCells = page.locator("#symbolsTable tbody tr td.footable-first-visible");
+            const beforeTexts = await groupCells.allTextContents();
 
             await groupSelect.selectOption({value: target.value});
-            const selectedGroup = target.text;
+            const selectedGroup = target.text.toLowerCase();
 
-            // Ensure table rows are loaded after filtering by waiting for table content to change
-            const groupCells = page.locator("#symbolsTable tbody tr td.footable-first-visible");
+            // Wait until table content updates (using expect.poll with matcher)
             await expect.poll(async () => {
-                const afterTexts = await groupCells.allTextContents();
-                return afterTexts;
-            }).not.toEqual(beforeTexts);
+                const texts = await groupCells.allTextContents();
+                return texts.join("|");
+            }, {timeout: 5000}).not.toBe(beforeTexts.join("|"));
+
+            const afterTexts = await groupCells.allTextContents();
 
             // Validate that all visible rows belong to the selected group
-            const texts = await groupCells.allTextContents();
-            for (const text of texts) {
-                expect(text.toLowerCase()).toContain(selectedGroup.toLowerCase());
+            for (const text of afterTexts) {
+                expect(text.toLowerCase()).toContain(selectedGroup);
             }
         }
     });
 
     test.describe.configure({mode: "serial"});
     test("edits score for the first symbol and saves", async ({page}) => {
-        // Try to change the score value for the first symbol
-        let scoreInput = page.locator("#symbolsTable .scorebar").first();
+        const scoreInput = page.locator("#symbolsTable .scorebar").first();
         const scoreInputId = await scoreInput.evaluate((element) => element.id);
         const oldValue = await scoreInput.inputValue();
+
+        // Try to change the score value for the first symbol
         await scoreInput.fill((parseFloat(oldValue) + 0.01).toFixed(2));
         await scoreInput.blur();
+
         // A save notification should appear
-        await expect(page.locator("#save-alert")).toBeVisible();
+        const saveAlert = page.locator("#save-alert");
+        await expect(saveAlert).toBeVisible();
+
         // Save changes
-        await page.locator("#save-alert").getByRole("button", {exact: true, name: "Save"}).click();
+        await saveAlert.getByRole("button", {exact: true, name: "Save"}).click();
+
         // A success alert should appear (wait for any alert-success)
-        await expect(page.locator(".alert-success, .alert-modal.alert-success")).toBeVisible();
+        const alertSuccess = page.locator(".alert-success, .alert-modal.alert-success");
+        await expect(alertSuccess).toBeVisible();
+
         // Revert to the old value (clean up after the test)
-        await expect(page.locator(".alert-success, .alert-modal.alert-success")).not.toBeVisible({timeout: 10000});
-        scoreInput = page.locator("#" + scoreInputId);
-        await scoreInput.fill(oldValue);
-        await scoreInput.blur();
-        await page.locator("#save-alert").getByRole("button", {exact: true, name: "Save"}).click();
+        await expect(alertSuccess).not.toBeVisible({timeout: 10000});
+        const revertedScoreInput = page.locator("#" + scoreInputId);
+        await revertedScoreInput.fill(oldValue);
+        await revertedScoreInput.blur();
+        await saveAlert.getByRole("button", {exact: true, name: "Save"}).click();
     });
 });
