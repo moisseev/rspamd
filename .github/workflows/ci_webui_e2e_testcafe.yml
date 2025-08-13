@@ -238,15 +238,30 @@ jobs:
           mkdir -p screenshots
           chmod 777 screenshots
 
-          # Run TestCafe with enhanced logging, timeout and diagnostics
           set +e  # Don't exit on error to capture exit code
+
+          # Download Pale Moon on the runner
+          mkdir -p palemoon
+          curl -L -o palemoon/palemoon.tar.xz https://archive.palemoon.org/palemoon/33.x/33.3.0/Linux/palemoon-33.3.0.linux-x86_64-gtk3.tar.xz
+          tar -xJf palemoon/palemoon.tar.xz -C palemoon
+          chmod +x palemoon/palemoon
+
+          # Wrapper для запуска Pale Moon под Xvfb (PM не поддерживает --headless)
+          cat > palemoon/pm-xvfb.sh <<'EOF'
+          #!/usr/bin/env bash
+          xvfb-run -a -s "-screen 0 1280x800x24 -ac +extension RANDR" /palemoon/palemoon "$@"
+          EOF
+          chmod +x palemoon/pm-xvfb.sh
+
+          # Run TestCafe using Pale Moon from mounted runner directory
           timeout 600 docker run --rm \
             --network rspamd-test-network \
             -v ${{ github.workspace }}/src/test/testcafe:/tests \
             -v ${{ github.workspace }}/screenshots:/tests/screenshots \
+            -v ${{ github.workspace }}/palemoon:/palemoon \
             -w /tests \
             testcafe/testcafe:latest \
-            firefox:headless tests/*.js
+            "path:/palemoon/pm-xvfb.sh" tests/*.js
 
           testcafe_exit_code=$?
           echo "TestCafe exit code: $testcafe_exit_code"
