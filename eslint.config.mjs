@@ -85,6 +85,12 @@ export default [
         },
     },
     {
+        // Playwright E2E tests
+        files: ["test/playwright/tests/*.mjs"],
+        rules: {
+            "no-await-in-loop": "off", // Playwright operations in loops are often sequential and not independent
+        },
+    },
         // TestCafe E2E tests: allow Node.js globals and TestCafe API
         files: ["test/testcafe/tests/*.js"],
         languageOptions: {
