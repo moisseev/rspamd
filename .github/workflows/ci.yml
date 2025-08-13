@@ -49,9 +49,9 @@ jobs:
       image: ghcr.io/rspamd/rspamd-build-docker:ubuntu-ci
       name: ubuntu-ci
 
-  webui-e2e:
+  webui-e2e-testcafe:
     needs: ubuntu
-    uses: ./.github/workflows/webui-e2e.yml
+    uses: ./.github/workflows/ci_webui_e2e_testcafe.yml
     with:
       image: ghcr.io/rspamd/rspamd-build-docker:ubuntu-ci
       name: ubuntu-ci
