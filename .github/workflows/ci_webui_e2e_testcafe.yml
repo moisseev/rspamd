@@ -1,4 +1,4 @@
-name: WebUI E2E Tests
+name: WebUI E2E (TestCafe)
 
 on:
   workflow_call:
@@ -10,10 +10,16 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: webui-e2e-testcafe-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
     # services:
     #   docker:
     #     image: docker:dind
@@ -28,7 +34,7 @@ jobs:
         with:
           path: src
 
-      - name: Define PREFIX
+      - name: Define install prefix
         run: echo "PREFIX=${GITHUB_WORKSPACE}/install" >> "$GITHUB_ENV"
 
       - name: Download rspamd binary from build job
@@ -40,13 +46,13 @@ jobs:
       - name: Prepare rspamd configuration
         run: |
           mkdir -p ${PREFIX}/etc/rspamd/local.d
-          cp -a src/conf/. "${PREFIX}/etc/rspamd/"
+          cp -r src/conf/* ${PREFIX}/etc/rspamd/
           echo 'static_dir = "/__w/rspamd/rspamd/install/share/rspamd/www";' > ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
           echo 'bind_socket = "*:11334";' >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
           echo 'secure_ip = [ "0.0.0.0/0", "::/0" ];' >> ${PREFIX}/etc/rspamd/local.d/worker-controller.inc
           cat > ${PREFIX}/etc/rspamd/local.d/logging.inc << 'EOF'
           type = "console";
-          level = "info";
+          level = "error";
           EOF
           # Disable multimap module to prevent hyperscan cache issues at runtime
           echo 'enabled = false;' > ${PREFIX}/etc/rspamd/local.d/multimap.conf
@@ -54,9 +60,6 @@ jobs:
           echo 'redis { enabled = false; }' > ${PREFIX}/etc/rspamd/local.d/modules.conf
           chmod +x ${PREFIX}/bin/rspamd
           chmod +x ${PREFIX}/bin/rspamadm
-
-      - name: Prepare host runtime dirs
-        run: |
           sudo mkdir -p /var/run/rspamd /var/lib/rspamd
           sudo chown $USER:$USER /var/run/rspamd /var/lib/rspamd
 
