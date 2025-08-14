@@ -246,7 +246,7 @@ jobs:
             -v ${{ github.workspace }}/screenshots:/tests/screenshots \
             -w /tests \
             testcafe/testcafe:1.1.1 \
-            sh -c "export NODE_PATH=/usr/lib/node_modules && TESTCAFE_BROWSER_ARGS='--headless' testcafe firefox tests/*.js"
+            sh -c "export NODE_PATH=/usr/lib/node_modules && xvfb-run testcafe firefox tests/*.js"
 
           testcafe_exit_code=$?
           echo "TestCafe exit code: $testcafe_exit_code"
