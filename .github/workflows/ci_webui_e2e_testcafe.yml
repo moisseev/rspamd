@@ -245,7 +245,7 @@ jobs:
             -v ${{ github.workspace }}/src/test/testcafe:/tests \
             -v ${{ github.workspace }}/screenshots:/tests/screenshots \
             -w /tests \
-            testcafe/testcafe:latest \
+            testcafe/testcafe:1.1.1 \
             firefox:headless tests/*.js
 
           testcafe_exit_code=$?
