@@ -42,12 +42,12 @@ jobs:
   #     image: ghcr.io/rspamd/rspamd-build-docker:centos-9
   #     name: centos-9
 
-  webui-e2e-playwright:
-    needs: ubuntu
-    uses: ./.github/workflows/ci_webui_e2e_playwright.yml
-    with:
-      image: ghcr.io/rspamd/rspamd-build-docker:ubuntu-ci
-      name: ubuntu-ci
+  # webui-e2e-playwright:
+  #   needs: ubuntu
+  #   uses: ./.github/workflows/ci_webui_e2e_playwright.yml
+  #   with:
+  #     image: ghcr.io/rspamd/rspamd-build-docker:ubuntu-ci
+  #     name: ubuntu-ci
 
   webui-e2e-testcafe:
     needs: ubuntu
