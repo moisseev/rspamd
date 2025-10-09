@@ -181,11 +181,11 @@ define(["jquery", "app/common", "app/libft", "footable"],
                             data.rows = [].concat.apply([], neighbours_data
                                 .map((e) => e.rows));
                             data.version = version;
-                            $("#legacy-history-badge").hide();
+                            $("#legacy-history-badge").addClass("d-none");
                         } else {
                             // Legacy version
                             data = [].concat.apply([], neighbours_data);
-                            $("#legacy-history-badge").show();
+                            $("#legacy-history-badge").removeClass("d-none");
                         }
                         const o = process_history_data(data);
                         const {items} = o;

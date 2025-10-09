@@ -245,10 +245,10 @@ define(["jquery", "app/common", "stickytabs", "visibility",
 
                 if (common.read_only) {
                     $(".ro-disable").attr("disabled", true);
-                    $(".ro-hide").hide();
+                    $(".ro-hide").addClass("d-none");
                 } else {
                     $(".ro-disable").removeAttr("disabled", true);
-                    $(".ro-hide").show();
+                    $(".ro-hide").removeClass("d-none");
                 }
 
                 $("#preloader").addClass("d-none");
