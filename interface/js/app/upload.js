@@ -151,7 +151,7 @@ define(["jquery", "app/common", "app/libft"],
                           "<td>" + hash + "</td></tr>");
                     });
                 }
-                $("#hash-card").removeClass("d-none").hide().slideDown();
+                $("#hash-card").slideDown();
             }
 
             common.query("plugins/fuzzy/hashes?flag=" + $("#fuzzy-flag").val(), {
