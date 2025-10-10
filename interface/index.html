@@ -48,8 +48,8 @@
 
 				<li role="presentation" class="nav-item"><a id="configuration_nav" aria-controls="configuration" role="tab" href="#configuration" data-bs-toggle="tab" class="nav-link">Configuration</a></li>
 				<li role="presentation" class="nav-item"><a id="symbols_nav" aria-controls="symbols" role="tab" href="#symbols" data-bs-toggle="tab" class="nav-link">Symbols</a></li>
-				<li role="presentation" class="nav-item"><a id="scan_nav" aria-controls="scan" role="tab" href="#scan" data-bs-toggle="tab" class="nav-link">Scan<span class="ro-hide" style="display: none;">/Learn</span></a></li>
-				<li role="presentation" class="nav-item"><a id="selectors_nav" aria-controls="selectors" role="tab" href="#selectors" data-bs-toggle="tab" class="nav-link ro-hide" style="display: none;">Test selectors</a></li>
+				<li role="presentation" class="nav-item"><a id="scan_nav" aria-controls="scan" role="tab" href="#scan" data-bs-toggle="tab" class="nav-link">Scan<span class="ro-hide d-none">/Learn</span></a></li>
+				<li role="presentation" class="nav-item"><a id="selectors_nav" aria-controls="selectors" role="tab" href="#selectors" data-bs-toggle="tab" class="nav-link ro-hide d-none">Test selectors</a></li>
 				<li role="presentation" class="nav-item"><a id="history_nav" aria-controls="history" role="tab" href="#history" data-bs-toggle="tab" class="nav-link">History</a></li>
 			</ul>
 		</div>
@@ -472,7 +472,7 @@
 						</div>
 					</div>
 				</div>
-				<div class="card ro-hide" style="display: none;">
+				<div class="card ro-hide d-none">
 					<div class="card-header text-secondary py-1 d-flex align-items-center">
 						<span class="icon me-3"><i class="fas fa-graduation-cap"></i></span>
 						<span class="h6 fw-bolder my-auto">Learn Rspamd</span>
@@ -774,7 +774,7 @@
 					    Browser detects passwords by form.elements[n].type == "password" and then detects
 						the username field by searching backwards through form elements for the text field
 						immediately before the password fields. -->
-					<input value="Rspamd controller password" style="display: none;"/>
+					<input value="Rspamd controller password" class="d-none"/>
 					<div class="input-group">
 						<input class="form-control"
 							   type="password"
