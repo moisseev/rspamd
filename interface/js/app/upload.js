@@ -364,16 +364,8 @@ define(["jquery", "app/common", "app/libft"],
 
         function toggleWidgets(showPicker, showInput) {
             fuzzyWidgets.forEach(({picker, input}) => {
-                if (showPicker) {
-                    common.show(picker);
-                } else {
-                    common.hide(picker);
-                }
-                if (showInput) {
-                    common.show(input);
-                } else {
-                    common.hide(input);
-                }
+                (showPicker ? common.show : common.hide)(picker);
+                (showInput ? common.show : common.hide)(input);
             });
         }
 
