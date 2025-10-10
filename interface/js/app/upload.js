@@ -151,7 +151,7 @@ define(["jquery", "app/common", "app/libft"],
                           "<td>" + hash + "</td></tr>");
                     });
                 }
-                $("#hash-card").slideDown();
+                common.show("#hash-card", true);
             }
 
             common.query("plugins/fuzzy/hashes?flag=" + $("#fuzzy-flag").val(), {
@@ -198,7 +198,7 @@ define(["jquery", "app/common", "app/libft"],
         });
 
         $(".card-close-btn").on("click", function () {
-            $(this).closest(".card").slideUp();
+            common.hide($(this).closest(".card"), true);
         });
 
         function getScanTextHeaders() {
@@ -364,8 +364,16 @@ define(["jquery", "app/common", "app/libft"],
 
         function toggleWidgets(showPicker, showInput) {
             fuzzyWidgets.forEach(({picker, input}) => {
-                $(picker)[showPicker ? "show" : "hide"]();
-                $(input)[showInput ? "show" : "hide"]();
+                if (showPicker) {
+                    common.show(picker);
+                } else {
+                    common.hide(picker);
+                }
+                if (showInput) {
+                    common.show(input);
+                } else {
+                    common.hide(input);
+                }
             });
         }
 
@@ -418,8 +426,8 @@ define(["jquery", "app/common", "app/libft"],
                             const $picker = $(picker);
                             $picker
                                 .empty()
-                                .append($("<option>", {value: "", text: "fuzzy_check disabled"}))
-                                .show();
+                                .append($("<option>", {value: "", text: "fuzzy_check disabled"}));
+                            common.show($picker);
                             container($picker)
                                 .attr("title", "fuzzy_check module is not enabled in server configuration.");
                         });
