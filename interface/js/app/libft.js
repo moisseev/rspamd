@@ -263,19 +263,16 @@ define(["jquery", "app/common", "footable"],
                     const self = this;
 
                     // Add search syntax hint icon to the search input after parent creates it
-                    if (self.$input && self.$input.length && !self.$input.find(".search-syntax-icon").length) {
-                        self.$input.css({
-                            "position": "relative",
-                            "padding-right": "30px"
-                        });
+                    if (self.$input && self.$input.length && !self.$input.parent().find(".search-syntax-icon").length) {
+                        self.$input.parent().css("position", "relative");
                         const $icon = $("<i/>", {
-                            class: "fas fa-info-circle search-syntax-icon text-muted",
+                            class: "fas fa-circle-question search-syntax-icon text-muted",
                             title: "Search syntax: \"exact phrase\", term1 term2 (AND), term1 AND term2, " +
                                    "term1 OR term2, -exclude",
-                            style: "position: absolute; right: 10px; top: 50%; transform: translateY(-50%); " +
-                                   "font-size: 14px; cursor: help; z-index: 10;"
+                            style: "position: absolute; top: 50%; transform: translate(-150%, -50%); " +
+                                   "z-index: 3; opacity: 0.3;"
                         });
-                        self.$input.parent().append($icon);
+                        $icon.insertAfter(self.$input);
                     }
 
                     const $form_grp = $("<div/>", {
