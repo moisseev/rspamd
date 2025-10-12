@@ -268,9 +268,7 @@ define(["jquery", "app/common", "footable"],
                         const $icon = $("<i/>", {
                             class: "fas fa-circle-question search-syntax-icon text-muted",
                             title: "Search syntax: \"exact phrase\", term1 term2 (AND), term1 AND term2, " +
-                                   "term1 OR term2, -exclude",
-                            style: "position: absolute; top: 50%; transform: translate(-150%, -50%); " +
-                                   "z-index: 3; opacity: 0.3;"
+                                   "term1 OR term2, -exclude"
                         });
                         $icon.insertAfter(self.$input);
                     }

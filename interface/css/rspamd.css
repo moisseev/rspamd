@@ -644,3 +644,17 @@ table#symbolsTable input[type="number"] {
         filter: invert(1);
     }
 }
+
+/* Search syntax hint icon */
+.search-syntax-icon {
+    position: absolute;
+    top: 50%;
+    transform: translate(-150%, -50%);
+    z-index: 3;
+    opacity: 0.3;
+    cursor: help;
+    transition: opacity 0.2s ease-in-out;
+}
+.search-syntax-icon:hover {
+    opacity: 0.6;
+}
