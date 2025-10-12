@@ -267,8 +267,12 @@ define(["jquery", "app/common", "footable"],
                         self.$input.parent().css("position", "relative");
                         const $icon = $("<i/>", {
                             class: "fas fa-circle-question search-syntax-icon text-muted",
-                            title: "Search syntax: \"exact phrase\", term1 term2 (AND), term1 AND term2, " +
-                                   "term1 OR term2, -exclude"
+                            title: "Search syntax: match all rows containing\n" +
+                                   "\"exact phrase\" — exact string (including spaces)\n" +
+                                   "term1 OR term2 — either term\n" +
+                                   "term1 AND term2 — both terms\n" +
+                                   "term1 term2 — both terms (same as AND)\n" +
+                                   "term1 -term2 — term1 but exclude rows with term2"
                         });
                         $icon.insertAfter(self.$input);
                     }
