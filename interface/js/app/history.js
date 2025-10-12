@@ -156,6 +156,26 @@ define(["jquery", "app/common", "app/libft", "footable"],
             return func;
         }
 
+        function addSearchSyntaxHint() {
+            const $searchInput = $("#history .footable-filtering-search input");
+            if ($searchInput.length && !$searchInput.parent().find(".search-syntax-icon").length) {
+                // Make the input container position relative
+                $searchInput.parent().css("position", "relative");
+
+                // Create the info icon with inline styles for positioning
+                const $icon = $("<i/>", {
+                    class: "fas fa-info-circle search-syntax-icon text-muted",
+                    title: "Search syntax: \"exact phrase\", term1 term2 (AND), term1 AND term2, " +
+                           "term1 OR term2, -exclude",
+                    style: "position: absolute; right: 8px; top: 50%; transform: translateY(-50%); " +
+                           "pointer-events: none; font-size: 14px;"
+                });
+
+                // Insert icon into the input's parent container
+                $searchInput.parent().append($icon);
+            }
+        }
+
         ui.getHistory = function () {
             $("#refresh, #updateHistory").attr("disabled", true);
             const histTo = histFrom - 1 + histCount;
@@ -194,6 +214,7 @@ define(["jquery", "app/common", "app/libft", "footable"],
                         if (Object.prototype.hasOwnProperty.call(common.tables, "history") &&
                             version === prevVersion) {
                             common.tables.history.rows.load(items);
+                            addSearchSyntaxHint();
                         } else {
                             libft.destroyTable("history");
                             // Is there a way to get an event when the table is destroyed?
@@ -202,6 +223,7 @@ define(["jquery", "app/common", "app/libft", "footable"],
                                     () => {
                                         $("#history .ft-columns-dropdown .btn-dropdown-apply").removeAttr("disabled");
                                         ui.updateHistoryControlsState();
+                                        addSearchSyntaxHint();
                                     });
                             }, 200);
                         }
