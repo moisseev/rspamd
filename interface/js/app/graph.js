@@ -23,7 +23,7 @@
  THE SOFTWARE.
  */
 
-/* global FooTable */
+/* global FooTable, require */
 
 define(["jquery", "app/common", "d3evolution", "d3pie", "d3", "footable"],
     ($, common, D3Evolution, D3Pie, d3) => {
@@ -149,6 +149,10 @@ define(["jquery", "app/common", "d3evolution", "d3pie", "d3", "footable"],
                         },
                         value: curr
                     }), [])
+                });
+                // Replace FooTable icons with FontAwesome
+                require(["app/footable-fontawesome"], (footableFA) => {
+                    footableFA.replace();
                 });
             }
 

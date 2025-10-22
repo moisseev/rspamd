@@ -1,4 +1,4 @@
-/* global FooTable */
+/* global FooTable, require */
 
 define(["jquery", "app/common", "footable"],
     ($, common) => {
@@ -240,6 +240,14 @@ define(["jquery", "app/common", "footable"],
         };
 
         ui.initHistoryTable = function (data, items, table, columnsDefault, expandFirst, postdrawCallback) {
+            // Wrap postdrawCallback to include FontAwesome icon replacement
+            function wrappedPostdrawCallback() {
+                if (postdrawCallback) postdrawCallback();
+                // Replace FooTable icons with FontAwesome
+                require(["app/footable-fontawesome"], (footableFA) => {
+                    footableFA.replace();
+                });
+            }
             /* eslint-disable no-underscore-dangle */
             FooTable.Cell.extend("collapse", function () {
                 // call the original method
@@ -379,7 +387,7 @@ define(["jquery", "app/common", "footable"],
                                 .addClass("active").siblings().removeClass("active");
                         }, 5);
                     },
-                    "postdraw.ft.table": postdrawCallback
+                    "postdraw.ft.table": wrappedPostdrawCallback
                 }
             });
 

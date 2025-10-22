@@ -22,7 +22,7 @@
  THE SOFTWARE.
  */
 
-/* global FooTable */
+/* global FooTable, require */
 
 define(["jquery", "app/common", "footable"],
     ($, common) => {
@@ -226,8 +226,13 @@ define(["jquery", "app/common", "footable"],
                                     $(".mb-disabled").attr("disabled", true);
                                 }
                             },
-                            "postdraw.ft.table":
-                                () => $("#refresh, #updateSymbols").removeAttr("disabled")
+                            "postdraw.ft.table": () => {
+                                $("#refresh, #updateSymbols").removeAttr("disabled");
+                                // Replace FooTable icons with FontAwesome
+                                require(["app/footable-fontawesome"], (footableFA) => {
+                                    footableFA.replace();
+                                });
+                            }
                         }
                     });
                 },

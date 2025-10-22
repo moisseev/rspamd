@@ -1,0 +1,29 @@
+/* FontAwesome Icons - Mapping from FooTable icon classes to FontAwesome */
+.fooicon {
+    position: relative;
+    top: 1px;
+    display: inline-block;
+    line-height: 1;
+}
+.fooicon::before,
+.fooicon::after {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+/* Map FooTable icon classes to FontAwesome classes */
+.fooicon-loader { /* Will be replaced by FA SVG */ }
+.fooicon-plus { /* Will be replaced by FA SVG */ }
+.fooicon-minus { /* Will be replaced by FA SVG */ }
+.fooicon-search { /* Will be replaced by FA SVG */ }
+.fooicon-remove { /* Will be replaced by FA SVG */ }
+.fooicon-sort { /* Will be replaced by FA SVG */ }
+.fooicon-sort-asc { /* Will be replaced by FA SVG */ }
+.fooicon-sort-desc { /* Will be replaced by FA SVG */ }
+.fooicon-pencil { /* Will be replaced by FA SVG */ }
+.fooicon-trash { /* Will be replaced by FA SVG */ }
+.fooicon-eye-close { /* Will be replaced by FA SVG */ }
+.fooicon-flash { /* Will be replaced by FA SVG */ }
+.fooicon-cog { /* Will be replaced by FA SVG */ }
+.fooicon-stats { /* Will be replaced by FA SVG */ }
