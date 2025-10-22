@@ -29,9 +29,9 @@ define(["jquery"], ($) => {
                 const faIcon = iconMap[fooClass];
                 $(`.${fooClass}`).each(function () {
                     const $el = $(this);
-                    // Remove fooicon class and add FontAwesome classes
-                    $el.removeClass(fooClass)
-                        .addClass(`fas fa-${faIcon}`);
+                    // Replace span with i element and update classes
+                    const $newEl = $("<i/>").addClass(`fas fa-${faIcon}`);
+                    $el.replaceWith($newEl);
                 });
             });
         }

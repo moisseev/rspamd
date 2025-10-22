@@ -228,10 +228,12 @@ define(["jquery", "app/common", "footable"],
                             },
                             "postdraw.ft.table": () => {
                                 $("#refresh, #updateSymbols").removeAttr("disabled");
-                                // Replace FooTable icons with FontAwesome
-                                require(["app/footable-fontawesome"], (footableFA) => {
-                                    footableFA.replace();
-                                });
+                                // Replace FooTable icons with FontAwesome after a slight delay
+                                setTimeout(() => {
+                                    require(["app/footable-fontawesome"], (footableFA) => {
+                                        footableFA.replace();
+                                    });
+                                }, 10);
                             }
                         }
                     });

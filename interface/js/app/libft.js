@@ -243,10 +243,13 @@ define(["jquery", "app/common", "footable"],
             // Wrap postdrawCallback to include FontAwesome icon replacement
             function wrappedPostdrawCallback() {
                 if (postdrawCallback) postdrawCallback();
-                // Replace FooTable icons with FontAwesome
-                require(["app/footable-fontawesome"], (footableFA) => {
-                    footableFA.replace();
-                });
+                // Replace FooTable icons with FontAwesome after a slight delay
+                // to ensure all add-ons have executed their postdraw functions
+                setTimeout(() => {
+                    require(["app/footable-fontawesome"], (footableFA) => {
+                        footableFA.replace();
+                    });
+                }, 10);
             }
             /* eslint-disable no-underscore-dangle */
             FooTable.Cell.extend("collapse", function () {

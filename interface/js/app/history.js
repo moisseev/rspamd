@@ -253,10 +253,12 @@ define(["jquery", "app/common", "app/libft", "footable"],
                     enabled: true
                 }
             });
-            // Replace FooTable icons with FontAwesome
-            require(["app/footable-fontawesome"], (footableFA) => {
-                footableFA.replace();
-            });
+            // Replace FooTable icons with FontAwesome after a slight delay
+            setTimeout(() => {
+                require(["app/footable-fontawesome"], (footableFA) => {
+                    footableFA.replace();
+                });
+            }, 10);
         }
 
         ui.getErrors = function () {
