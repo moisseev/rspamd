@@ -1,0 +1,42 @@
+.fooicon-loader {
+    content: '\f110';
+}
+.fooicon-plus {
+    content: '\f067';
+}
+.fooicon-minus {
+    content: '\f068';
+}
+.fooicon-search {
+    content: '\f002';
+}
+.fooicon-remove {
+    content: '\f00d';
+}
+.fooicon-sort {
+    content: '\f0dc';
+}
+.fooicon-sort-asc {
+    content: '\f0de';
+}
+.fooicon-sort-desc {
+    content: '\f0dd';
+}
+.fooicon-pencil {
+    content: '\f303';
+}
+.fooicon-trash {
+    content: '\f2ed';
+}
+.fooicon-eye-close {
+    content: '\f070';
+}
+.fooicon-flash {
+    content: '\f00c';
+}
+.fooicon-cog {
+    content: '\f013';
+}
+.fooicon-stats {
+    content: '\f080';
+}
