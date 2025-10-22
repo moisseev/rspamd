@@ -23,7 +23,7 @@
  THE SOFTWARE.
  */
 
-/* global FooTable, require */
+/* global FooTable */
 
 define(["jquery", "app/common", "d3evolution", "d3pie", "d3", "footable"],
     ($, common, D3Evolution, D3Pie, d3) => {
@@ -150,12 +150,6 @@ define(["jquery", "app/common", "d3evolution", "d3pie", "d3", "footable"],
                         value: curr
                     }), [])
                 });
-                // Replace FooTable icons with FontAwesome after a slight delay
-                setTimeout(() => {
-                    require(["app/footable-fontawesome"], (footableFA) => {
-                        footableFA.replace();
-                    });
-                }, 10);
             }
 
             function drawRrdTable(rows, unit) {

@@ -22,7 +22,7 @@
  THE SOFTWARE.
  */
 
-/* global FooTable, require */
+/* global FooTable */
 
 define(["jquery", "app/common", "app/libft", "footable"],
     ($, common, libft) => {
@@ -253,12 +253,6 @@ define(["jquery", "app/common", "app/libft", "footable"],
                     enabled: true
                 }
             });
-            // Replace FooTable icons with FontAwesome after a slight delay
-            setTimeout(() => {
-                require(["app/footable-fontawesome"], (footableFA) => {
-                    footableFA.replace();
-                });
-            }, 10);
         }
 
         ui.getErrors = function () {

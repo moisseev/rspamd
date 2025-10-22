@@ -1,4 +1,4 @@
-/* global FooTable, require */
+/* global FooTable */
 
 define(["jquery", "app/common", "footable"],
     ($, common) => {
@@ -240,17 +240,6 @@ define(["jquery", "app/common", "footable"],
         };
 
         ui.initHistoryTable = function (data, items, table, columnsDefault, expandFirst, postdrawCallback) {
-            // Wrap postdrawCallback to include FontAwesome icon replacement
-            function wrappedPostdrawCallback() {
-                if (postdrawCallback) postdrawCallback();
-                // Replace FooTable icons with FontAwesome after a slight delay
-                // to ensure all add-ons have executed their postdraw functions
-                setTimeout(() => {
-                    require(["app/footable-fontawesome"], (footableFA) => {
-                        footableFA.replace();
-                    });
-                }, 10);
-            }
             /* eslint-disable no-underscore-dangle */
             FooTable.Cell.extend("collapse", function () {
                 // call the original method
@@ -390,7 +379,7 @@ define(["jquery", "app/common", "footable"],
                                 .addClass("active").siblings().removeClass("active");
                         }, 5);
                     },
-                    "postdraw.ft.table": wrappedPostdrawCallback
+                    "postdraw.ft.table": postdrawCallback
                 }
             });
 
