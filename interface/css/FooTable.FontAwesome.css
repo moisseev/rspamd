@@ -6,6 +6,13 @@
     line-height: 1;
 }
 
+/* Hide the old Glyphicons pseudo-elements */
+.fooicon::before,
+.fooicon::after {
+    content: none !important;
+    display: none !important;
+}
+
 .fooicon svg {
     /* Ensure SVG icons display properly */
     width: 1em;
