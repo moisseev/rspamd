@@ -1,42 +1,77 @@
-.fooicon-loader {
-    content: '\f110';
+/* FontAwesome Icons - Mapping from FooTable class names to FontAwesome SVG + JS icons.
+   This uses Font Awesome 6 Free Solid icons via the SVG + JS method for sharp rendering. */
+.fooicon {
+    position: relative;
+    top: 1px;
+    display: inline-block;
+    /* stylelint-disable-next-line font-family-no-missing-generic-family-keyword */
+    font-family: "Font Awesome 6 Free" !important;
+    font-style: normal;
+    font-weight: 900;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
-.fooicon-plus {
-    content: '\f067';
+
+.fooicon::before,
+.fooicon::after {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
 }
-.fooicon-minus {
-    content: '\f068';
+
+.fooicon-loader::before {
+    content: "\f110";
 }
-.fooicon-search {
-    content: '\f002';
+
+.fooicon-plus::before {
+    content: "\f067";
 }
-.fooicon-remove {
-    content: '\f00d';
+
+.fooicon-minus::before {
+    content: "\f068";
 }
-.fooicon-sort {
-    content: '\f0dc';
+
+.fooicon-search::before {
+    content: "\f002";
 }
-.fooicon-sort-asc {
-    content: '\f0de';
+
+.fooicon-remove::before {
+    content: "\f00d";
 }
-.fooicon-sort-desc {
-    content: '\f0dd';
+
+.fooicon-sort::before {
+    content: "\f0dc";
 }
-.fooicon-pencil {
-    content: '\f303';
+
+.fooicon-sort-asc::before {
+    content: "\f0de";
 }
-.fooicon-trash {
-    content: '\f2ed';
+
+.fooicon-sort-desc::before {
+    content: "\f0dd";
 }
-.fooicon-eye-close {
-    content: '\f070';
+
+.fooicon-pencil::before {
+    content: "\f303";
 }
-.fooicon-flash {
-    content: '\f00c';
+
+.fooicon-trash::before {
+    content: "\f2ed";
 }
-.fooicon-cog {
-    content: '\f013';
+
+.fooicon-eye-close::before {
+    content: "\f070";
 }
-.fooicon-stats {
-    content: '\f080';
+
+.fooicon-flash::before {
+    content: "\f00c";
+}
+
+.fooicon-cog::before {
+    content: "\f013";
+}
+
+.fooicon-stats::before {
+    content: "\f080";
 }
