@@ -5,8 +5,9 @@ define(["jquery", "fontawesome"], ($, FontAwesome) => {
     "use strict";
 
     // Icon mapping from FooTable classes to FontAwesome icon definitions
+    // Each entry: [prefix, iconName, additionalClasses (optional)]
     const iconMap = {
-        "fooicon-loader": ["fas", "spinner"],
+        "fooicon-loader": ["fas", "spinner", "fa-spin"],
         "fooicon-plus": ["fas", "plus"],
         "fooicon-minus": ["fas", "minus"],
         "fooicon-search": ["fas", "search"],
@@ -40,20 +41,32 @@ define(["jquery", "fontawesome"], ($, FontAwesome) => {
         const currentIcon = $el.data("fa-current-icon");
         if (currentIcon === fooClass) return;
 
-        const [prefix, iconName] = iconMap[fooClass];
+        const iconDef = iconMap[fooClass];
+        const [prefix, iconName, additionalClasses] = iconDef;
 
         try {
             // Create FontAwesome SVG icon
-            const iconDef = FontAwesome.icon({prefix, iconName});
+            const iconObj = FontAwesome.icon({prefix, iconName});
+
+            // Create jQuery object for SVG
+            const $svg = $(iconObj.node[0]);
+
+            // Ensure clicks pass through SVG to parent span
+            $svg.css("pointer-events", "none");
+
+            // Add optional additional classes (e.g., fa-spin)
+            if (additionalClasses) {
+                $svg.addClass(additionalClasses);
+            }
 
             // Replace element content with SVG
-            const [node] = iconDef.node;
-            $el.empty().append(node);
+            $el.empty().append($svg);
 
             // Mark as processed with current icon type
             $el.data("fa-current-icon", fooClass);
         } catch (e) {
-            // Ignore icon creation errors silently
+            // eslint-disable-next-line no-console
+            console.error(`Failed to create FontAwesome icon for ${fooClass}:`, e);
         }
     }
 
@@ -107,7 +120,7 @@ define(["jquery", "fontawesome"], ($, FontAwesome) => {
         });
     }
 
-    /*
+    /**
      * Public API
      */
 

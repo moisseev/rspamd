@@ -1,36 +1,24 @@
-/* Minimal styling for fooicon containers with SVG icons */
-.fooicon {
-    position: relative;
-    top: 1px;
-    display: inline-block;
-    line-height: 1;
-}
-
 /* Hide the old Glyphicons pseudo-elements */
 .fooicon::before,
 .fooicon::after {
     content: none !important;
-    display: none !important;
+    display: none;
 }
 
+/* Critical: allow clicks to pass through SVG to parent span */
 .fooicon svg {
-    /* Ensure SVG icons display properly */
-    width: 1em;
-    height: 1em;
-    vertical-align: -0.125em;
+    pointer-events: none;
 }
 
-/* Smaller icons in footable header */
-.footable-header .fooicon svg {
+
+/* Smaller toggle icon and icons in footable header */
+.footable-header .fooicon svg,
+.footable-toggle.fooicon svg {
     font-size: 12px;
 }
 
-/* Ensure spinner spins */
-.fooicon svg.fa-spinner {
-    animation: fa-spin 1s infinite linear;
-}
-
-@keyframes fa-spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+/* Stop span rotation for loader - we animate the SVG instead */
+.fooicon-loader {
+    animation: none !important;
+    transform: none !important;
 }
