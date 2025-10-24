@@ -5,7 +5,7 @@ define(["jquery", "fontawesome"], ($, FontAwesome) => {
     "use strict";
 
     // Icon mapping from FooTable classes to FontAwesome icon definitions
-    // Each entry: [prefix, iconName, additionalClasses (optional)]
+    // Each entry: [prefix, iconName, additionalClasses (optional, space-separated string)]
     const iconMap = {
         "fooicon-loader": ["fas", "spinner", "fa-spin"],
         "fooicon-plus": ["fas", "plus"],
