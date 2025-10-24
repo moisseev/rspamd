@@ -15,12 +15,6 @@ define(["jquery", "fontawesome"], ($, FontAwesome) => {
         "fooicon-sort": ["fas", "arrows-up-down"],
         "fooicon-sort-asc": ["fas", "arrow-down-short-wide"],
         "fooicon-sort-desc": ["fas", "arrow-up-wide-short"],
-        "fooicon-pencil": ["fas", "pencil-alt"],
-        "fooicon-trash": ["fas", "trash-alt"],
-        "fooicon-eye-close": ["fas", "eye-slash"],
-        "fooicon-flash": ["fas", "bolt"],
-        "fooicon-cog": ["fas", "cog"],
-        "fooicon-stats": ["fas", "chart-bar"]
     };
 
     let observer = null;
