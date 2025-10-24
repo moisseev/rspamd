@@ -10,7 +10,6 @@
     pointer-events: none;
 }
 
-
 /* Smaller toggle icon and icons in footable header */
 .footable-header .fooicon svg,
 .footable-toggle.fooicon svg {
@@ -21,4 +20,9 @@
 .fooicon-loader {
     animation: none !important;
     transform: none !important;
+}
+
+/* Make spinner icon larger to match original size */
+.fooicon-loader.fooicon svg {
+    font-size: 36px;
 }
