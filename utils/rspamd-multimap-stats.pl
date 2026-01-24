@@ -235,17 +235,36 @@ sub get_map {
         }
         if ( $multimap{$symbol}{'regexp'} ) {
             (/^\/(.+)\/(\S?)(?:\s+(\d\.\d))?(\s+#)?/) || die "Syntax error in $map_file";
-            ( $2 ne "" && $2 ne "i" ) && die "Unsupported flag $2 in $map_file";
-#            $map{$symbol}[$i]{'pattern'}=$1; $map{$symbol}[$i]{'flag'}=$2 ? $2 : ''; $map{$symbol}[$i]{'result'}=$3;
-            @map_file_stat[$i] = {
-                'pattern' => $1,
-                'flag'    => $2 ? $2 : '',
-                'result'  => $3,
+
+            my $pattern = $1;
+            my $flags   = $2 || '';
+
+            # Validate flags: check that flags are valid for Rspamd
+            if ( $flags && $flags =~ /[^imsxurOL]/ ) {
+                die "Invalid regex flag in $map_file at line $.: '$flags' (supported: imsxurOL)";
+            }
+
+            # Extract only Perl-compatible PCRE flags for compilation.
+            # Flags 'u', 'r', 'O', 'L' are Rspamd-specific flags that Perl doesn't support.
+            # They affect processing in Rspamd, but not pattern matching in this utility context.
+            # Flags 'm' and 's' are kept, though they have no effect on single-line values from log
+            # (log contains single-line matched values without newlines).
+            my $perl_flags = $flags;
+            $perl_flags =~ s/[^imsx]//g;
+
+            # Precompile regex for performance and validation
+            my $compiled = eval "qr/\$pattern/$perl_flags";
+            die "Invalid regex in $map_file at line $.: $@" if $@;
+
+            $map_file_stat[$i] = {
+                'pattern'  => $pattern,
+                'flag'     => $flags,       # Keep all flags for display in output
+                'compiled' => $compiled,    # Compiled regex with Perl-compatible flags only
+                'result'   => $3,
             };
         } else {
             (/^([.\d]+(?:\/\d{1,2})?)(?:\s+(\d\.\d+))?(\s+#)?/) || die "Syntax error in $map_file";
-#            $map{$symbol}[$i]{'pattern'}=$1; $map{$symbol}[$i]{'result'} = $2 ? $2 : '';
-            @map_file_stat[$i] = {
+            $map_file_stat[$i] = {
                 'pattern' => $1,
                 'result'  => $2 ? $2 : '',
             };
@@ -344,7 +363,7 @@ sub ProcessLog {
                                     last;
                                 }
                             } elsif ( $multimap{$sym_name}{'regexp'} ) {
-                                if ( $sym_opt =~ /(?$_->{'flag'})$_->{'pattern'}/ ) {
+                                if ( $sym_opt =~ $_->{'compiled'} ) {
                                     $_->{'count'}++;
                                     $matched = 1;
                                     last;
@@ -609,6 +628,49 @@ Only file maps are supported for now. Examples of valid file map paths:
     /path/to/list
     file:///path/to/list
     fallback+file:///path/to/list
+
+=head2 REGEX FLAGS SUPPORT
+
+For regexp-type maps, the following PCRE regex flags are supported:
+
+=over 4
+
+=item B<i>
+
+Case-insensitive matching (PCRE_CASELESS)
+
+=item B<m>
+
+Multiline mode - ^ and $ match line boundaries (PCRE_MULTILINE). Note: has no effect on single-line log values.
+
+=item B<s>
+
+Dotall mode - . matches newlines (PCRE_DOTALL). Note: has no effect on single-line log values.
+
+=item B<x>
+
+Extended mode - ignore whitespace and allow comments in pattern (PCRE_EXTENDED)
+
+=item B<u>
+
+UTF-8 mode (Rspamd-specific flag, noted but not affecting Perl matching)
+
+=item B<r>
+
+Raw mode (Rspamd-specific flag, noted but not affecting Perl matching)
+
+=item B<O>
+
+No optimization (Rspamd-specific flag, noted but not affecting Perl matching)
+
+=item B<L>
+
+Leftmost match for Hyperscan (Rspamd-specific flag, noted but not affecting Perl matching)
+
+=back
+
+Rspamd-specific flags (u, r, O, L) are validated and stored but do not affect pattern matching
+in this utility, as log entries already contain matched values processed by Rspamd.
 
 =cut
 
