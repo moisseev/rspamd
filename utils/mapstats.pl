@@ -19,10 +19,10 @@ my $help         = 0;
 
 # Associate file extensions with decompressors
 my %decompressor = (
-    'bz2' => 'bzip2 -cd',
-    'gz'  => 'gzip -cd',
-    'xz'  => 'xz -cd',
-    'zst' => 'zstd -cd',
+    'bz2' => [ 'bzip2', '-cd' ],
+    'gz'  => [ 'gzip',  '-cd' ],
+    'xz'  => [ 'xz',    '-cd' ],
+    'zst' => [ 'zstd',  '-cd' ],
 );
 
 GetOptions(
@@ -109,10 +109,10 @@ if ( $log_file eq '-' || $log_file eq '' ) {
     # Process logs
     foreach (@logs) {
         my $ext = (/[^.]+\.?([^.]*?)$/)[0];
-        my $dc  = $decompressor{$ext} || 'cat';
+        my $dc  = $decompressor{$ext} || ['cat'];
 
-        open( $rspamd_log, "-|", "$dc $log_dir/$_" )
-          or die "cannot execute $dc $log_dir/$_ : $!";
+        open( $rspamd_log, "-|", @$dc, "$log_dir/$_" )
+          or die "cannot execute @$dc $log_dir/$_ : $!";
 
         printf { interactive(*STDERR) } "\033[J  Parsing log files: [%d/%d] %s\033[G", $log_file_num++, scalar @logs,
           $_;
@@ -122,14 +122,14 @@ if ( $log_file eq '-' || $log_file eq '' ) {
         &ProcessLog;
 
         close($rspamd_log)
-          or warn "cannot close $dc $log_dir/$_: $!";
+          or warn "cannot close @$dc $log_dir/$_: $!";
     }
     print { interactive(*STDERR) } "\033[J\033[G";    # Progress indicator clean-up
 } else {
     my $ext = ( $log_file =~ /[^.]+\.?([^.]*?)$/ )[0];
-    my $dc  = $decompressor{$ext} || 'cat';
-    open( $rspamd_log, "-|", "$dc $log_file" )
-      or die "cannot execute $dc $log_file : $!";
+    my $dc  = $decompressor{$ext} || ['cat'];
+    open( $rspamd_log, "-|", @$dc, $log_file )
+      or die "cannot execute @$dc $log_file : $!";
     $spinner_update_time = 0;                         # Force spinner update
     &spinner;
     &ProcessLog();
