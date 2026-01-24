@@ -52,6 +52,10 @@ use NetAddr::IP qw(netlimit :lower);
 
 my $multimap_ref = &configdump('multimap');
 my %multimap     = %$multimap_ref;
+
+die "No multimap configuration found in rspamadm configdump output.\n"
+  unless %multimap;
+
 my %unmatched;
 
 my %map;
@@ -63,10 +67,8 @@ for my $symbol ( keys %multimap ) {
     my $added;
 
     if ( ref( $multimap{$symbol}{'map'} ) eq 'ARRAY' ) {
-        say join( ', ', @{ $multimap{$symbol}{'map'} } );
         @maps = @{ $multimap{$symbol}{'map'} };
     } else {
-        say $multimap{$symbol}{'map'};
         @maps = ( $multimap{$symbol}{'map'} );
     }
 
@@ -77,20 +79,30 @@ for my $symbol ( keys %multimap ) {
         #    /path/to/list
         #    file:///path/to/list
         #    fallback+file:///path/to/list
-        next if ( $map_source =~ m{^.*(?<!file)://} );
+        if ( $map_source =~ m{^.*(?<!file)://} ) {
+            say "$symbol: $map_source [SKIPPED]";
+            next;
+        }
 
         unless ($added) {
             push @symbols_search, $symbol;
             $added++;
         }
 
-        say "map_source = $map_source";
-
         my @map_entries = &get_map( $symbol, $map_source );
+        if ( @map_entries == 0 ) {
+            say "$symbol: $map_source [FAILED]";
+            next;
+        }
+
+        say "$symbol: $map_source [OK] - " . scalar(@map_entries) . " entries";
         $map{$symbol}[$i] = \@map_entries;
         $i++;
     }
 }
+
+die "No file-based multimap symbols found. Nothing to analyze.\n"
+  unless @symbols_search;
 
 say "====== maps added =====";
 
@@ -190,8 +202,24 @@ exit;
 
 sub configdump {
     my $cmd  = 'rspamadm configdump -C' . ( defined $_[0] ? " $_[0]" : '' );
-    my $json = `$cmd` or die $!;
-    return decode_json $json;
+    my $json = `$cmd`;
+
+    # Check command execution status
+    if ( $? != 0 ) {
+        my $exit_code = $? >> 8;
+        die "rspamadm configdump failed with exit code $exit_code\n";
+    }
+
+    # Check if we got any output
+    die "rspamadm configdump returned empty output\n"
+      unless ( defined $json && $json ne '' );
+
+    # Try to decode JSON
+    my $config;
+    eval { $config = decode_json $json; };
+    die "Failed to parse JSON from rspamadm configdump: $@\n" if $@;
+
+    return $config;
 }
 
 sub beep {
@@ -203,11 +231,16 @@ sub get_map {
     my ( $symbol, $map_file ) = @_;
 
     unless ( -e $map_file ) {
-        say "***** Map file $map_file does not exists.";
-        return;
+        warn "Map file does not exist: $map_file\n";
+        return ();
     }
 
-    open( MAP, "$map_file" ) or die "$map_file: $!";
+    unless ( -r $map_file ) {
+        warn "Map file is not readable: $map_file\n";
+        return ();
+    }
+
+    open( MAP, "$map_file" ) or die "Cannot open map file $map_file: $!\n";
 
     my $i = 0;
     my @map_file_stat;
@@ -223,9 +256,8 @@ sub get_map {
             my $flags   = $2 || '';
 
             # Validate flags: check that flags are valid for Rspamd
-            if ( $flags && $flags =~ /[^imsxurOL]/ ) {
-                die "Invalid regex flag in $map_file at line $.: '$flags' (supported: imsxurOL)";
-            }
+            die "Invalid regex flag in $map_file at line $.: '$flags' (supported: imsxurOL)"
+              if $flags && $flags =~ /[^imsxurOL]/;
 
             # Extract only Perl-compatible PCRE flags for compilation.
             # Flags 'u', 'r', 'O', 'L' are Rspamd-specific flags that Perl doesn't support.
@@ -286,7 +318,7 @@ sub ProcessLog {
             if ( $_ !~
                 /\(([^()]+)\): \[(NaN|-?\d+(?:\.\d+)?)\/(-?\d+(?:\.\d+)?)\]\s+\[([^\]]*)\].+? time: (\d+\.\d+)ms/ )
             {
-                say "BAD: $_";
+                warn "Bad log line: $_";
                 next;
             }
 
@@ -317,10 +349,16 @@ sub ProcessLog {
                     if ( $sym =~ /([^(]+)\([.0-9]+\)\{([^;]+);\}/ ) {
                         $sym_name = $1;
                         $sym_opt  = $2;
-                        $ip       = NetAddr::IP->new($sym_opt)
-                          if ( $multimap{$sym_name}{'type'} eq 'ip' );
+                        if ( $multimap{$sym_name}{'type'} eq 'ip' ) {
+                            $ip = NetAddr::IP->new($sym_opt);
+                            unless ( defined $ip ) {
+                                warn "Invalid IP address in symbol $sym_name: $sym_opt\n";
+                                next;
+                            }
+                        }
                     } else {
-                        say "Invalid symbol format: $sym";
+                        warn "Invalid symbol format: $sym\n";
+                        $unmatched{$sym}++;
                         next;
                     }
 
@@ -367,7 +405,13 @@ sub ProcessLog {
 
 sub GetLogfilesList {
     my ($dir) = @_;
-    opendir( DIR, $dir ) or die $!;
+
+    die "Log directory does not exist: $dir\n"
+      unless -d $dir;
+    die "Log directory is not readable: $dir\n"
+      unless -r $dir;
+
+    opendir( DIR, $dir ) or die "Cannot open directory $dir: $!\n";
 
     my $pattern = join( '|', keys %decompressor );
     my $re      = qr/\.[0-9]+(?:\.(?:$pattern))?/;
@@ -385,6 +429,9 @@ sub GetLogfilesList {
     # Select required logs and revers their order
     @logs =
       reverse splice( @logs, $exclude_logs, $num_logs ||= @logs - $exclude_logs );
+
+    die "No log files found in directory: $dir\n"
+      unless @logs;
 
     # Loop through array printing out filenames
     print { interactive(*STDERR) } "\nLog files to process:\n";
@@ -441,8 +488,7 @@ sub log_time_format {
         {
             next;
         } else {
-            print "Unknown log format\n";
-            exit 1;
+            die "Unknown log format\n";
         }
     }
     return ( $format, $line );
