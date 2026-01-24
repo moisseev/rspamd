@@ -54,17 +54,14 @@ my $multimap_ref = &configdump('multimap');
 my %multimap     = %$multimap_ref;
 my %unmatched;
 
-#my (%map, $i);
 my %map;
 my @symbols_search;    # Symbols defined in multimap to search in the log
 
 for my $symbol ( keys %multimap ) {
 
-    #print Dumper($multimap{$symbol}{'map'});
     my @maps;
     my $added;
 
-    #    say @{ $multimap{$symbol}{'map'} };
     if ( ref( $multimap{$symbol}{'map'} ) eq 'ARRAY' ) {
         say join( ', ', @{ $multimap{$symbol}{'map'} } );
         @maps = @{ $multimap{$symbol}{'map'} };
@@ -73,39 +70,29 @@ for my $symbol ( keys %multimap ) {
         @maps = ( $multimap{$symbol}{'map'} );
     }
 
-    #say @{ $multimap{$symbol}{'map'} };
-    #    my @maps = $multimap{$symbol}{'map'};
-    #    for my $submap ($multimap{$symbol}{'map'}) {
-
     my $i = 0;
-    foreach my $submap (@maps) {
+    foreach my $map_source (@maps) {
 
         # Skip maps other than file maps:
         #    /path/to/list
         #    file:///path/to/list
         #    fallback+file:///path/to/list
-        next if ( $submap =~ m{^.*(?<!file)://} );
+        next if ( $map_source =~ m{^.*(?<!file)://} );
 
         unless ($added) {
             push @symbols_search, $symbol;
             $added++;
         }
 
-        say "submap = $submap";
+        say "map_source = $map_source";
 
-        #    $map{$symbol}[$i] = \&get_map($symbol, $submap);
-        #    $i++;
-        push( @{ $map{$symbol}[$i] }, &get_map( $symbol, $submap ) );
-
-        #    print Dumper(%map);
+        my @map_entries = &get_map( $symbol, $map_source );
+        $map{$symbol}[$i] = \@map_entries;
+        $i++;
     }
 }
 
-#    print Dumper(%map);
 say "====== maps added =====";
-
-#say '@symbols_search = ';
-#print Dumper (@symbols_search);
 
 #========================================
 
@@ -154,9 +141,6 @@ for my $symbol ( keys %map ) {
     say "$symbol:";
     for my $key ( keys %{ $multimap{$symbol} } ) {
         next
-#        say "    $key=$multimap{$symbol}{$key} ";
-#print Dumper($multimap{$symbol}{$key});
-#say 'array? = ', (ref($multimap{$symbol}{$key}) eq 'ARRAY');
           if ( $key eq 'pattern' );
         my $value =
           ( ref( $multimap{$symbol}{$key} ) eq 'ARRAY' )
@@ -168,7 +152,6 @@ for my $symbol ( keys %map ) {
     say "\nPattern\t\tMatches\n";
 
     my @rule = @{ $map{$symbol} };
-#    foreach (@rule){
     foreach my $mappy (@rule) {
 
         my $map_idx = 0;
@@ -275,7 +258,6 @@ sub get_map {
 
     close(MAP) or warn "File closing error: $1";
 
-#print Dumper(@map_file_stat);
     return @map_file_stat;
 }
 
@@ -285,12 +267,6 @@ sub ProcessLog {
     while () {
         last if eof $rspamd_log;
         $_ = (@line) ? shift @line : <$rspamd_log>;
-
-#        if ( !$enabled && ( $search_pattern eq "" || /$search_pattern/ ) ) {
-#            $enabled = 1;
-#        }
-#
-#        next if !$enabled;
 
         if (/^.*rspamd_task_write_log.*$/) {
             &spinner;
@@ -355,7 +331,6 @@ sub ProcessLog {
 
                     foreach my $mappy (@rule_map) {
                         foreach ( @{$mappy} ) {
-#print Dumper $m;
                             if ( $multimap{$sym_name}{'type'} eq 'ip' ) {
                                 if ( $ip->within( NetAddr::IP->new( $_->{'pattern'} ) ) ) {
                                     $_->{'count'}++;
