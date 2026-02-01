@@ -257,10 +257,10 @@ sub get_map {
         return ();
     }
 
-    open( MAP, "$map_file" ) or die "Cannot open map file $map_file: $!\n";
+    open( my $map_fh, '<', $map_file ) or die "Cannot open map file $map_file: $!\n";
 
     my @entries;
-    while (<MAP>) {
+    while (<$map_fh>) {
         my $line_num = $.;
         chomp;
 
@@ -297,7 +297,7 @@ sub get_map {
             $perl_flags =~ s/[^imsx]//g;
 
             # Precompile regex for performance and validation
-            my $compiled = eval "qr/\$pattern/$perl_flags";
+            my $compiled = eval { qr/(?$perl_flags:$pattern)/ };
             die "Invalid regex in $map_file at line $line_num: $@\n" if $@;
 
             push @entries,
@@ -328,7 +328,7 @@ sub get_map {
         }
     }
 
-    close(MAP) or warn "Cannot close map file $map_file: $!\n";
+    close($map_fh) or warn "Cannot close map file $map_file: $!\n";
 
     return @entries;
 }
@@ -454,20 +454,20 @@ sub GetLogfilesList {
     die "Log directory is not readable: $dir\n"
       unless -r $dir;
 
-    opendir( DIR, $dir ) or die "Cannot open directory $dir: $!\n";
+    opendir( my $dir_fh, $dir ) or die "Cannot open directory $dir: $!\n";
 
     my $pattern = join( '|', keys %decompressor );
     my $re      = qr/\.[0-9]+(?:\.(?:$pattern))?/;
 
     # Add unnumbered logs first
     my @logs =
-      grep { -f "$dir/$_" && !/$re/ } readdir(DIR);
+      grep { -f "$dir/$_" && !/$re/ } readdir($dir_fh);
 
     # Add numbered logs
-    rewinddir(DIR);
-    push( @logs, ( sort numeric ( grep { -f "$dir/$_" && /$re/ } readdir(DIR) ) ) );
+    rewinddir($dir_fh);
+    push( @logs, ( sort numeric ( grep { -f "$dir/$_" && /$re/ } readdir($dir_fh) ) ) );
 
-    closedir(DIR);
+    closedir($dir_fh);
 
     # Select required logs and revers their order
     @logs =
