@@ -64,7 +64,6 @@ my @symbols_search;    # Symbols defined in multimap to search in the log
 for my $symbol ( keys %multimap ) {
 
     my @maps;
-    my $added;
 
     if ( ref( $multimap{$symbol}{'map'} ) eq 'ARRAY' ) {
         @maps = @{ $multimap{$symbol}{'map'} };
@@ -72,7 +71,14 @@ for my $symbol ( keys %multimap ) {
         @maps = ( $multimap{$symbol}{'map'} );
     }
 
-    my $i = 0;
+    # Initialize structure for this symbol
+    $map{$symbol} = {
+        type      => $multimap{$symbol}{'type'},
+        is_regexp => $multimap{$symbol}{'regexp'} ? 1 : 0,
+        maps      => [],
+    };
+
+    my $has_valid_maps = 0;
     foreach my $map_source (@maps) {
 
         # Skip maps other than file maps:
@@ -84,21 +90,27 @@ for my $symbol ( keys %multimap ) {
             next;
         }
 
-        unless ($added) {
-            push @symbols_search, $symbol;
-            $added++;
-        }
-
         my @map_entries = &get_map( $symbol, $map_source );
         if ( @map_entries == 0 ) {
             say "$symbol: $map_source [FAILED]";
             next;
         }
 
-        say "$symbol: $map_source [OK] - " . scalar(@map_entries) . " entries";
-        $map{$symbol}[$i] = \@map_entries;
-        $i++;
+        # Count only non-comment entries
+        my $entry_count = grep { !$_->{is_comment} } @map_entries;
+        say "$symbol: $map_source [OK] - $entry_count entries";
+
+        push @{ $map{$symbol}{maps} },
+          {
+            source  => $map_source,
+            entries => \@map_entries,
+          };
+
+        $has_valid_maps = 1;
     }
+
+    # Add symbol to search list only if it has valid file maps
+    push @symbols_search, $symbol if $has_valid_maps;
 }
 
 die "No file-based multimap symbols found. Nothing to analyze.\n"
@@ -148,42 +160,48 @@ if ( $log_file eq '-' || $log_file eq '' ) {
 }
 
 #========================================
-for my $symbol ( keys %map ) {
+for my $symbol (@symbols_search) {
 
     say "$symbol:";
-    for my $key ( keys %{ $multimap{$symbol} } ) {
-        next
-          if ( $key eq 'pattern' );
-        my $value =
-          ( ref( $multimap{$symbol}{$key} ) eq 'ARRAY' )
-          ? '[ ' . join( ', ', @{ $multimap{$symbol}{$key} } ) . ' ]'
-          : $multimap{$symbol}{$key};
-        say "    $key=$value ";
-    }
+    say "    type=$map{$symbol}{type}";
 
-    say "\nPattern\t\tMatches\n";
+    foreach my $map_entry ( @{ $map{$symbol}{maps} } ) {
+        say "\nMap: $map_entry->{source}";
+        say "Pattern\t\t\tMatches\t\tComment";
+        say '-' x 80;
 
-    my @rule = @{ $map{$symbol} };
-    foreach my $mappy (@rule) {
+        foreach my $entry ( @{ $map_entry->{entries} } ) {
 
-        my $map_idx = 0;
-        if ( ref( $multimap{$symbol}{'map'} ) eq 'ARRAY' ) {
-            say "map = $multimap{$symbol}{'map'}[$map_idx]";
-        }
-        $map_idx++;
-
-        foreach ( @{$mappy} ) {
-            if ( $multimap{$symbol}{'regexp'} ) {
-                print "/$_->{'pattern'}/$_->{'flag'}";
-            } else {
-                print "$_->{'pattern'}";
+            # Output full-line comments as-is
+            if ( $entry->{is_comment} ) {
+                say $entry->{content};
+                next;
             }
-            print "\t$_->{'count'}" if defined $_->{'count'};
+
+            # Output pattern
+            if ( $map{$symbol}{is_regexp} ) {
+                printf "%-23s", "/$entry->{pattern}/$entry->{flag}";
+            } else {
+                printf "%-23s", $entry->{pattern};
+            }
+
+            # Output match count
+            if ( defined $entry->{count} && $entry->{count} > 0 ) {
+                printf "\t%d", $entry->{count};
+            } else {
+                print "\t-";
+            }
+
+            # Output inline comment if present
+            if ( $entry->{comment} ) {
+                print "\t\t# $entry->{comment}";
+            }
+
             say '';
         }
     }
 
-    say '-' x 80;
+    say '=' x 80;
 }
 
 say "Does not match any pattern (symbol occurences):"
@@ -242,21 +260,33 @@ sub get_map {
 
     open( MAP, "$map_file" ) or die "Cannot open map file $map_file: $!\n";
 
-    my $i = 0;
-    my @map_file_stat;
+    my @entries;
     while (<MAP>) {
-        if ( /^(#)/ || ( $_ eq "\n" ) ) {
-            chomp( $multimap{$symbol}{'pattern'}[$i] = $_ );
+        my $line_num = $.;
+        chomp;
+
+        # Full-line comments or empty lines
+        if ( /^#(.*)$/ || /^\s*$/ ) {
+            push @entries,
+              {
+                line_num   => $line_num,
+                is_comment => 1,
+                content    => $_,
+              };
             next;
         }
-        if ( $multimap{$symbol}{'regexp'} ) {
-            (/^\/(.+)\/(\S?)(?:\s+(\d\.\d))?(\s+#)?/) || die "Syntax error in $map_file";
 
-            my $pattern = $1;
-            my $flags   = $2 || '';
+        if ( $multimap{$symbol}{'regexp'} ) {
+
+            # /pattern/flags [score] [# comment]
+            my ( $pattern, $flags, $score, $comment ) = /^\/(.+)\/(\S?)(?:\s+(\d+\.?\d*))?(?:\s+#\s*(.*))?$/;
+
+            die "Syntax error in $map_file at line $line_num\n" unless defined $pattern;
+
+            $flags ||= '';
 
             # Validate flags: check that flags are valid for Rspamd
-            die "Invalid regex flag in $map_file at line $.: '$flags' (supported: imsxurOL)"
+            die "Invalid regex flag in $map_file at line $line_num: '$flags' (supported: imsxurOL)\n"
               if $flags && $flags =~ /[^imsxurOL]/;
 
             # Extract only Perl-compatible PCRE flags for compilation.
@@ -269,28 +299,39 @@ sub get_map {
 
             # Precompile regex for performance and validation
             my $compiled = eval "qr/\$pattern/$perl_flags";
-            die "Invalid regex in $map_file at line $.: $@" if $@;
+            die "Invalid regex in $map_file at line $line_num: $@\n" if $@;
 
-            $map_file_stat[$i] = {
-                'pattern'  => $pattern,
-                'flag'     => $flags,       # Keep all flags for display in output
-                'compiled' => $compiled,    # Compiled regex with Perl-compatible flags only
-                'result'   => $3,
-            };
+            push @entries,
+              {
+                line_num => $line_num,
+                pattern  => $pattern,
+                flag     => $flags,
+                compiled => $compiled,
+                result   => $score,
+                comment  => $comment,
+                count    => 0,
+              };
         } else {
-            (/^([.\d]+(?:\/\d{1,2})?)(?:\s+(\d\.\d+))?(\s+#)?/) || die "Syntax error in $map_file";
-            $map_file_stat[$i] = {
-                'pattern' => $1,
-                'result'  => $2 ? $2 : '',
-            };
 
+            # IP/CIDR or string [score] [# comment]
+            my ( $pattern, $score, $comment ) = /^([.\d]+(?:\/\d{1,2})?)(?:\s+(\d+\.?\d*))?(?:\s+#\s*(.*))?$/;
+
+            die "Syntax error in $map_file at line $line_num\n" unless defined $pattern;
+
+            push @entries,
+              {
+                line_num => $line_num,
+                pattern  => $pattern,
+                result   => $score,
+                comment  => $comment,
+                count    => 0,
+              };
         }
-        $i++;
     }
 
-    close(MAP) or warn "File closing error: $1";
+    close(MAP) or warn "Cannot close map file $map_file: $!\n";
 
-    return @map_file_stat;
+    return @entries;
 }
 
 sub ProcessLog {
@@ -349,7 +390,7 @@ sub ProcessLog {
                     if ( $sym =~ /([^(]+)\([.0-9]+\)\{([^;]+);\}/ ) {
                         $sym_name = $1;
                         $sym_opt  = $2;
-                        if ( $multimap{$sym_name}{'type'} eq 'ip' ) {
+                        if ( $map{$sym_name}{type} eq 'ip' ) {
                             $ip = NetAddr::IP->new($sym_opt);
                             unless ( defined $ip ) {
                                 warn "Invalid IP address in symbol $sym_name: $sym_opt\n";
@@ -362,33 +403,36 @@ sub ProcessLog {
                         next;
                     }
 
-                    my $matched  = 0;
-                    my @rule_map = @{ $map{$sym_name} };
+                    my $matched = 0;
 
-#                    foreach (@rule_map) {
+                    # Iterate through all maps for this symbol
+                    foreach my $map_entry ( @{ $map{$sym_name}{maps} } ) {
+                        foreach my $entry ( @{ $map_entry->{entries} } ) {
 
-                    foreach my $mappy (@rule_map) {
-                        foreach ( @{$mappy} ) {
-                            if ( $multimap{$sym_name}{'type'} eq 'ip' ) {
-                                if ( $ip->within( NetAddr::IP->new( $_->{'pattern'} ) ) ) {
-                                    $_->{'count'}++;
+                            # Skip comments and empty lines
+                            next if $entry->{is_comment};
+
+                            if ( $map{$sym_name}{type} eq 'ip' ) {
+                                if ( $ip->within( NetAddr::IP->new( $entry->{pattern} ) ) ) {
+                                    $entry->{count}++;
                                     $matched = 1;
                                     last;
                                 }
-                            } elsif ( $multimap{$sym_name}{'regexp'} ) {
-                                if ( $sym_opt =~ $_->{'compiled'} ) {
-                                    $_->{'count'}++;
+                            } elsif ( $map{$sym_name}{is_regexp} ) {
+                                if ( $sym_opt =~ $entry->{compiled} ) {
+                                    $entry->{count}++;
                                     $matched = 1;
                                     last;
                                 }
                             } else {
-                                if ( $sym_opt eq $_->{'pattern'} ) {
-                                    $_->{'count'}++;
+                                if ( $sym_opt eq $entry->{pattern} ) {
+                                    $entry->{count}++;
                                     $matched = 1;
                                     last;
                                 }
                             }
                         }
+                        last if $matched;
                     }
 
                     $unmatched{$sym}++
