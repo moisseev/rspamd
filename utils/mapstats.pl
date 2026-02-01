@@ -1,7 +1,6 @@
 #!/usr/bin/env perl
 
 use 5.014;
-use Data::Dumper;
 use Getopt::Long;
 use Pod::Usage;
 use Time::Local;
