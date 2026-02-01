@@ -648,8 +648,8 @@ rspamd-multimap-stats [options] [--log file]
 
 =item B<--log>
 
-Specifies log file or directory to read data from. If a directory is specified B<rspamd-multimap-stats> analyses files in the
-directory including known compressed file types. Number of log files can be limited using B<--num-logs> and
+Specifies log file or directory to read data from. If a directory is specified B<rspamd-multimap-stats> analyses files
+in the directory including known compressed file types. Number of log files can be limited using B<--num-logs> and
 B<--exclude-logs> options. This assumes that files in the log directory have B<newsyslog(8)>- or B<logrotate(8)>-like
 name format with numeric indexes. Files without indexes (generally it is merely one file) are considered the most
 recent and files with lower indexes are considered newer.
@@ -686,12 +686,11 @@ Prints the manual page and exits.
 
 =head1 DESCRIPTION
 
-B<rspamd-multimap-stats> will get maps from multimap module configuration, read the given Rspamd log file (or standard input) and provide statistics on map matches.
+B<rspamd-multimap-stats> will get maps from multimap module configuration, read the given Rspamd log file (or standard
+input) and provide statistics on map matches.
 
-Only file maps are supported for now. Examples of valid file map paths:
-    /path/to/list
-    file:///path/to/list
-    fallback+file:///path/to/list
+Only file maps are supported for now. Examples of valid file map paths:     /path/to/list     file:///path/to/list   
+fallback+file:///path/to/list
 
 =head2 REGEX FLAGS SUPPORT
 
@@ -733,8 +732,8 @@ Leftmost match for Hyperscan (Rspamd-specific flag, noted but not affecting Perl
 
 =back
 
-Rspamd-specific flags (u, r, O, L) are validated and stored but do not affect pattern matching
-in this utility, as log entries already contain matched values processed by Rspamd.
+Rspamd-specific flags (u, r, O, L) are validated and stored but do not affect pattern matching in this utility, as log
+entries already contain matched values processed by Rspamd.
 
 =cut
 
