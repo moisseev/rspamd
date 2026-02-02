@@ -8,6 +8,17 @@ use IO::Handle;
 use warnings;
 use strict;
 
+# Optional dependency: NetAddr::IP for IP/CIDR map matching
+my $has_netaddr_ip;
+
+BEGIN {
+    $has_netaddr_ip = eval {
+        require NetAddr::IP;
+        NetAddr::IP->import(qw(netlimit :lower));
+        1;
+    };
+}
+
 my $log_file  = "";
 my $startTime = "";
 my $endTime;
@@ -47,13 +58,15 @@ my %timeStamp;
 #========================================
 
 use JSON::PP;
-use NetAddr::IP qw(netlimit :lower);
 
 my $multimap_ref = &configdump('multimap');
 my %multimap     = %$multimap_ref;
 
 die "No multimap configuration found in rspamadm configdump output.\n"
   unless %multimap;
+
+# Track if we've warned about missing NetAddr::IP
+my $netaddr_warning_shown = 0;
 
 my %unmatched;
 
@@ -405,6 +418,18 @@ sub ProcessLog {
                         $sym_name = $1;
                         $sym_opt  = $2;
                         if ( $map{$sym_name}{type} eq 'ip' ) {
+                            unless ($has_netaddr_ip) {
+                                unless ($netaddr_warning_shown) {
+                                    warn "\nSkipping IP map matching: NetAddr::IP module not installed\n";
+                                    warn "Install with:\n";
+                                    warn "  Debian/Ubuntu: apt-get install libnetaddr-ip-perl\n";
+                                    warn "  FreeBSD:       pkg install p5-NetAddr-IP\n";
+                                    warn "  RHEL/CentOS:   yum install perl-NetAddr-IP\n";
+                                    warn "  CPAN:          cpan NetAddr::IP\n\n";
+                                    $netaddr_warning_shown = 1;
+                                }
+                                next;
+                            }
                             $ip = NetAddr::IP->new($sym_opt);
                             unless ( defined $ip ) {
                                 warn "Invalid IP address in symbol $sym_name: $sym_opt\n";
@@ -427,7 +452,9 @@ sub ProcessLog {
                             next if $entry->{is_comment};
 
                             if ( $map{$sym_name}{type} eq 'ip' ) {
-                                if ( $ip->within( NetAddr::IP->new( $entry->{pattern} ) ) ) {
+
+                                # IP matching requires NetAddr::IP (checked above)
+                                if ( $ip && $ip->within( NetAddr::IP->new( $entry->{pattern} ) ) ) {
                                     $entry->{count}++;
                                     $matched = 1;
                                     last;
@@ -762,6 +789,13 @@ Perl 5.14 or later
 
 =item *
 
-Perl modules: NetAddr::IP
+Perl modules: JSON::PP (core module)
+
+=item *
+
+Optional: NetAddr::IP (required only for C<type=ip> maps)
+
+Install with: C<apt-get install libnetaddr-ip-perl> (Debian/Ubuntu), C<pkg install p5-NetAddr-IP> (FreeBSD), C<yum
+install perl-NetAddr-IP> (RHEL/CentOS), or C<cpan NetAddr::IP>
 
 =back
