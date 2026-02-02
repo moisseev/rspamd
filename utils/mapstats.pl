@@ -203,10 +203,26 @@ for my $symbol (@symbols_search) {
     say '=' x 80;
 }
 
-say "Does not match any pattern (symbol occurences):"
-  if %unmatched;
-for my $key ( keys %unmatched ) {
-    say "$key\t$unmatched{$key}";
+if (%unmatched) {
+    say "\nSymbols with unmatched values:";
+    say '-' x 80;
+
+    # Group by symbol name
+    my %grouped;
+    for my $key ( keys %unmatched ) {
+        if ( $key =~ /^(\w+)\(/ ) {
+            push @{ $grouped{$1} }, { full => $key, count => $unmatched{$key} };
+        }
+    }
+
+    for my $symbol ( sort keys %grouped ) {
+        my @entries = sort { $b->{count} <=> $a->{count} } @{ $grouped{$symbol} };
+        say "\n$symbol: ${\(scalar @entries)} unmatched value(s)";
+        for my $entry ( @entries[ 0 .. ( $#entries < 4 ? $#entries : 4 ) ] ) {
+            say "  $entry->{count}x: $entry->{full}";
+        }
+        say "  ..." if @entries > 5;
+    }
 }
 
 beep();
@@ -291,8 +307,6 @@ sub get_map {
             # Extract only Perl-compatible PCRE flags for compilation.
             # Flags 'u', 'r', 'O', 'L' are Rspamd-specific flags that Perl doesn't support.
             # They affect processing in Rspamd, but not pattern matching in this utility context.
-            # Flags 'm' and 's' are kept, though they have no effect on single-line values from log
-            # (log contains single-line matched values without newlines).
             my $perl_flags = $flags;
             $perl_flags =~ s/[^imsx]//g;
 
@@ -312,8 +326,9 @@ sub get_map {
               };
         } else {
 
-            # IP/CIDR or string [score] [# comment]
-            my ( $pattern, $score, $comment ) = /^([.\d]+(?:\/\d{1,2})?)(?:\s+(\d+\.?\d*))?(?:\s+#\s*(.*))?$/;
+            # Plain pattern [score] [# comment]
+            # Pattern can be: IP, CIDR, domain, hostname, string, etc.
+            my ( $pattern, $score, $comment ) = /^(\S+)(?:\s+(\d+\.?\d*))?(?:\s+#\s*(.*))?$/;
 
             die "Syntax error in $map_file at line $line_num\n" unless defined $pattern;
 
