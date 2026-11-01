@@ -27,6 +27,7 @@ local rspamd_regexp = require "rspamd_regexp"
 local rspamd_tld_lookup = require "rspamd_tld_lookup"
 local rspamd_expression = require "rspamd_expression"
 local rspamd_ip = require "rspamd_ip"
+local lua_aliases = require "lua_aliases"
 local lua_util = require "lua_util"
 local lua_selectors = require "lua_selectors"
 local lua_maps = require "lua_maps"
@@ -1154,6 +1155,20 @@ local function apply_addr_filter(task, filter, input, rule)
       return fun.totable(fun.map(function(a)
         return a.name
       end, addr))
+    end
+  elseif filter == 'email:identity' then
+    local addr = rspamd_util.parse_mail_address(input, task:get_mempool(), 1024)
+    if addr and addr[1] then
+      local res = {}
+      for _, a in ipairs(addr) do
+        local identity = lua_aliases.mailbox_identity(a)
+        if identity then
+          table.insert(res, identity)
+        end
+      end
+      if #res > 0 then
+        return res
+      end
     end
   elseif filter == 'ip_addr' then
     local ip_addr = rspamd_ip.from_string(input)
@@ -2362,6 +2377,13 @@ end
 local opts = rspamd_config:get_all_opt(N)
 if opts and type(opts) == 'table' then
   redis_params = rspamd_parse_redis_server(N)
+
+  -- Register equivalent domain classes for the email:identity filter.
+  -- Additive: the same map registered by other modules (e.g. forged_recipients)
+  -- is shared, not duplicated.
+  if opts.equivalent_domains then
+    lua_aliases.init_equivalent_domains(rspamd_config, opts.equivalent_domains)
+  end
 
   -- Initialize regexp_rules symbol states from existing sa_atoms and sa_meta_rules
   -- This helps with module reload scenarios

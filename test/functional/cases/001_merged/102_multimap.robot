@@ -133,6 +133,31 @@ MAP - FROM GLOB WILDCARD SUPERSTRING MISS
   ...   Settings={symbols_enabled = [GLOB_MAP]}
   Do Not Expect Symbol  GLOB_MAP
 
+MAP - FROM IDENTITY GMAIL DOTS
+  Scan File  ${MESSAGE}  From=f.i.r.s.t.last@gmail.com
+  ...   Settings={symbols_enabled = [IDENTITY_FROM]}
+  Expect Symbol  IDENTITY_FROM
+
+MAP - FROM IDENTITY GMAIL DOTS AND TAG
+  Scan File  ${MESSAGE}  From=first.last+tag@gmail.com
+  ...   Settings={symbols_enabled = [IDENTITY_FROM]}
+  Expect Symbol  IDENTITY_FROM
+
+MAP - FROM IDENTITY EQUIVALENT DOMAIN
+  Scan File  ${MESSAGE}  From=first.last@googlemail.com
+  ...   Settings={symbols_enabled = [IDENTITY_FROM]}
+  Expect Symbol  IDENTITY_FROM
+
+MAP - FROM IDENTITY NON-GMAIL DOTS KEPT
+  Scan File  ${MESSAGE}  From=first.last@example.com
+  ...   Settings={symbols_enabled = [IDENTITY_FROM]}
+  Do Not Expect Symbol  IDENTITY_FROM
+
+MAP - REPLYTO IDENTITY GMAIL DOTS
+  Scan File  ${RSPAMD_TESTDIR}/messages/replyto_gmail_dotted.eml
+  ...   Settings={symbols_enabled = [IDENTITY_REPLYTO]}
+  Expect Symbol  IDENTITY_REPLYTO
+
 MAP - RCPT DOMAIN HIT
   Scan File  ${MESSAGE}  Rcpt=user@example.com
   ...   Settings={symbols_enabled = [RCPT_DOMAIN]}
